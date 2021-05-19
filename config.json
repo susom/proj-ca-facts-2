@@ -1,9 +1,9 @@
 {
-	"name": "ClassNameHere",
+	"name": "CA Facts 2.0 Project EM",
 
-	"namespace": "Stanford\\ClassNameHere",
+	"namespace": "Stanford\\ProjCaFacts2",
 
-	"description": "A template for a REDCap External Module",
+	"description": "An EM to manage the CA FACTS 2.0 Study workflow",
 
 	"documentation": "README.md",
 
@@ -12,31 +12,136 @@
 			"name": "Andrew Martin",
 			"email": "andy123@stanford.edu",
 			"institution": "Stanford University"
+		},
+        {
+			"name": "Irvin Szeto",
+			"email": "irvins@stanford.edu",
+			"institution": "Stanford University"
 		}
+
 	],
 
 	"permissions": [
-		"redcap_module_system_enable",
-		"redcap_module_project_enable",
-		"redcap_module_save_configuration"
+		"redcap_every_page_top"
 	],
-	
-	"enable-every-page-hooks-on-system-pages": false,	
+
+	"framework-version": 5,
+
+	"enable-every-page-hooks-on-system-pages": false,
 
 	"links": {
 		"project": [
+			{
+	        "name": "CA-FACTS Invitation API Instructions",
+	        "icon": "fas fa-info",
+	        "url": "pages/instructions.php"
+		  },
+		  {
+	        "name": "CA-FACTS Pending Invites Report",
+	        "icon": "fas fa-flag",
+	        "url": "pages/pending_invites.php"
+		  },
+		  {
+	        "name": "CA-FACTS Test Kit / UPC Linkage",
+	        "icon": "fas fa-link",
+	        "url": "pages/link_kit_upc.php"
+	      },
+		  {
+	        "name": "CA-FACTS Bulk Upload Lab Results",
+	        "icon": "fas fa-poll-h",
+	        "url": "pages/upload_results.php"
+		  },
+		  {
+	        "name": "CA-FACTS Return Scan",
+	        "icon": "fas fa-barcode",
+	        "url": "pages/kit_return_scan.php"
+		  },
+		  {
+	        "name": "CA-FACTS Unique Acess Code Generator",
+	        "icon": "fas fa-laptop-code",
+	        "url": "pages/unique_ac.php"
+	      },
+		  {
+	        "name": "CA-FACTS Results Sent Check Off",
+	        "icon": "fas fa-check-square",
+	        "url": "pages/results_checkoff.php"
+		  },
+		  {
+	        "name": "CA-FACTS Per Household Per Participant Records",
+	        "icon": "fas fa-table",
+	        "url": "pages/household_report.php"
+	      },
+		  {
+	        "name": "CA-FACTS Follow Up Survey Check",
+	        "icon": "fas fa-search",
+	        "url": "cron/one_month_followup.php",
+			"show-header-and-footer": true
+	      }
 
 		],
 		"control-center": [
-
-		]
+	      {
+	        "name": "CA-FACTS 2.0 Invitation Endpoint Config",
+	        "icon": "gear",
+	        "url": "pages/app_config.php"
+	      }
+	    ]
 	},
 
 	"no-auth-pages": [
-
+        "endpoint/signup-ivr",
+		"endpoint/signup",
+		"endpoint/kitsubmission",
+		"getAsset"
 	],
 
 	"project-settings": [
+        {
+			"key": "em-mode",
+			"name": "<b>EM Mode</b><br>This EM is used in more than one project with different functionality.  Please indicate which project this is?",
+			"required": true,
+			"type": "radio",
+            "choices":[
+                {
+                  "name" : "ACCESS CODE DB",
+                  "value" : "access_code_db"
+                },
+                {
+                  "name" : "MAIN PROJECT",
+                  "value" : "kit_order"
+                }
+            ]
+		},
+		{
+			"key": "xpsship-api-key",
+			"name": "<b>XPSship.com API KEY</b>",
+			"required": false,
+			"type": "text"
+		},
+		{
+			"key": "xpsship-client-id",
+			"name": "<b>XPSship.com Client ID</b>",
+			"required": false,
+			"type": "text"
+		},
+		{
+			"key": "xpsship-integration-id",
+			"name": "<b>XPSship.com integration ID</b>",
+			"required": false,
+			"type": "text"
+		},
+		{
+			"key": "usps-merchant-id",
+			"name": "<b>USPS merchant id</b>",
+			"required": false,
+			"type": "text"
+		},
+		{
+			"key": "usps-mid",
+			"name": "<b>USPS MID</b>",
+			"required": false,
+			"type": "text"
+		},
 		{
 			"key": "enable-project-debug-logging",
 			"name": "<b>Enable Debug Logging</b><br><i>(optional)</i> Requires installation and configuration of emLogger",
@@ -45,6 +150,15 @@
 		}
 	],
 
+	"crons": [
+		{
+			"cron_name": "cafacts_one_month_followup",
+			"cron_description": "Cron that runs everyday ~ 600-700 PST to push followup for kit-submission?",
+			"method": "daily_month_followups",
+			"cron_hour": 6,
+			"cron_minute":30
+		}
+	],
 
 	"system-settings": [
 		{

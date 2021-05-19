@@ -1,6 +1,6 @@
 <?php
-namespace Stanford\ClassNameHere;
-/** @var ClassNameHere $this */
+namespace Stanford\ProjCaFacts2;
+/** @var ProjCaFacts2 $this */
 
 trait emLoggerTrait
 {
