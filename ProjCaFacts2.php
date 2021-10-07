@@ -58,19 +58,19 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
 	        self::$MODE = $this->getProjectSetting('em-mode');
 	        $this->emDebug("In mode " . self::$MODE);
         }
-        
+
         // put the proper project ids into class vars
         $this->getAllSupportProjects();
     }
 
     function redcap_every_page_top($project_id){
 		// every page load
-		// parse URL for id 
-		// update the flowsheet launch url to pass in info for id 
+		// parse URL for id
+		// update the flowsheet launch url to pass in info for id
 
 		// THIS IS SO IMPORTANT FOR DOING THE DAGS
         // $_SESSION["username"] = \ExternalModules\ExternalModules::getUsername();
-        
+
         $proj_links = array("CA-FACTS Pending Invites Report", "CA-FACTS Bulk Upload Lab Results", "CA-FACTS Test Kit / UPC Linkage","CA-FACTS Return Scan","CA-FACTS Unique Acess Code Generator", "CA-FACTS Results Sent Check Off", "CA-FACTS Reconcile Submission - Main", "CA-FACTS Follow Up Survey Check");
         switch($project_id){
             case $this->main_project:
@@ -102,7 +102,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
 		</script>
 		<?php
     }
-    
+
     /**
      * Print all enabled projects with this EM
      */
@@ -143,14 +143,14 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
             $name = $project['name'];
             $url  = APP_PATH_WEBROOT . 'ProjectSetup/index.php?pid=' . $project['project_id'];
             $mode = $this->getProjectSetting("em-mode", $pid);
-            
+
             $enabledProjects[$mode] = array(
                 'pid'   => $pid,
                 'name'  => $name,
                 'url'   => $url,
                 'mode'  => $mode
             );
-            
+
         }
 
         $this->enabledProjects = $enabledProjects;
@@ -223,28 +223,28 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
      */
     public function parseFormInput() {
         $this->emDebug("Incoming POST AC + Zip: ", $_POST);
-        
+
         if (empty($_POST)){
             $_POST = json_decode(file_get_contents('php://input'), true);
         }
         $this->access_code   = isset($_POST[self::FIELD_ACCESS_CODE]) ? strtoupper(trim(filter_var($_POST[self::FIELD_ACCESS_CODE], FILTER_SANITIZE_NUMBER_INT))) : NULL ;
         $this->zip_code      = isset($_POST[self::FIELD_ZIP])         ? trim(filter_var($_POST[self::FIELD_ZIP], FILTER_SANITIZE_NUMBER_INT)) : NULL ;
-        
+
         $valid               = (is_null($this->access_code) || is_null($this->zip_code)) ? false : true;
         return $valid;
     }
 
     /**
-     * Verifies the invitation access code and marks it as used, and creates a record in the main project and returns a public survey URL 
+     * Verifies the invitation access code and marks it as used, and creates a record in the main project and returns a public survey URL
      * @return bool survey url link
      */
     public function formHandler() {
-        // Match INCOMING AccessCode Attempt and Verify ZipCode , find the record in the AC DB 
+        // Match INCOMING AccessCode Attempt and Verify ZipCode , find the record in the AC DB
         $address_data = $this->getTertProjectData("access_code_db");
         if (!$address_data){
             $this->returnError("Error, no matching AC/ZIP combination found");
         }
-        
+
         //TODO ALWAYS RETURN ADDRESS DATA but ADD PROPERTY FOR EXISTING
         if(!empty($address_data["participant_used_id"])){
             // AC ALREADY USED, bUT SEND THE SURVEY URL ANYWAY
@@ -268,6 +268,8 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
                 }
             }
             $r    = \REDCap::saveData($this->main_project, 'json', json_encode(array($data)) );
+            $this->emDebug("why not saving to main ?? " , $r);
+
 
             //2.  UPDATE AC DB record with time stamp and "claimed" main record project
             $data = array(
@@ -276,11 +278,12 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
                 "participant_used_date" => date("Y-m-d H:i:s")
             );
             $r    = \REDCap::saveData($this->access_code_project, 'json', json_encode(array($data)) );
-        }        
+        }
 
         //3.  GET PUBLIC SURVEY URL WITH FIELDS LINKED
         $this->emDebug("is the survey link failing?");
-        $survey_link = \REDCap::getSurveyLink($record=$next_id, $instrument='invitation_questionnaire', $event_id='', $instance=1, $project_id=$this->main_project);
+        $event_id       = \REDCap::getEventIdFromUniqueEvent("baseline_arm_1");
+        $survey_link    = \REDCap::getSurveyLink($record=$next_id, $instrument='language_select', $event_id, $instance=1, $project_id=$this->main_project);
         $this->emDebug("survey link" , $survey_link);
         // Return result
         header("Content-type: application/json");
@@ -288,7 +291,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
     }
 
     /**
-     * Verifies the invitation access code and marks it as used, and creates a record in the main project with all the answers supplied via voice 
+     * Verifies the invitation access code and marks it as used, and creates a record in the main project with all the answers supplied via voice
      * @return bool survey url link
      */
     public function IVRHandler($call_vars) {
@@ -310,12 +313,12 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         $this->access_code   = $call_vars["code"];
         $this->zip_code      = $call_vars["zip"];
 
-        // Match INCOMING AccessCode Attempt and Verify ZipCode , find the record in the AC DB 
+        // Match INCOMING AccessCode Attempt and Verify ZipCode , find the record in the AC DB
         $address_data = $this->getTertProjectData("access_code_db");
         if (!$address_data){
             $this->returnError("Error, no matching AC/ZIP combination found");
         }
-        
+
 
         $data = array();
         if(!empty($address_data["participant_used_id"])){
@@ -343,8 +346,8 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
 
             );
             $r    = \REDCap::saveData($this->access_code_project, 'json', json_encode(array($data_ac)) );
-        }     
-        
+        }
+
         $data["record_id"] = $next_id;
 
         foreach($call_vars as $rc_var => $rc_val){
@@ -357,7 +360,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
 
         $r    = \REDCap::saveData($this->main_project, 'json', json_encode(array($data)) );
         $this->emDebug("DID IT REALLY SAVE IVR ???", $r, $data);
-        
+
         return false;
     }
 
@@ -373,7 +376,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         if (!$kit_submit_record_id){
             $this->returnError("Error, no matching household id found");
         }
-        
+
         // AT THIS POINT WE SHOULD HAVE THE RECORD_ID OF THE KITSUBMISSION THAT MATCHES THE INPUT
         $record_id          = $kit_submit_record_id["main_id"];
         $bc_event_arm       = $kit_submit_record_id["event_arm"];
@@ -383,7 +386,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
 
         //GET PUBLIC SURVEY URL FOR THAT RECORD TO SEND BACK TO GAUSS TO DISPLAY TO THE USER
         $survey_link        = \REDCap::getSurveyLink($record_id, $instrument, $event_id, $instance=1, $project_id=$this->main_project);
-        
+
         // TODO BETTER WAY TO WRANGLE THIS DATA? WAIT FOR REDCAP DONE FOR CLEAR PICTURE
         if($survey_link){
             $instrument_check = "blood_collection";
@@ -395,7 +398,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
                 "events"        => $event_id,
                 "filterLogic"   => ""
             );
-            $res    = \REDCap::getData($params); 
+            $res    = \REDCap::getData($params);
             $sq     = json_decode($res,1);
 
             if(!empty($sq)){
@@ -410,7 +413,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         );
 
         header("Content-type: application/json");
-        echo json_encode($return_data);		
+        echo json_encode($return_data);
     }
 
     /**
@@ -421,14 +424,14 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         if(!empty($household_id)){
             $part_id    = $participant_id;
             $hh_id      = $household_id;
-            
+
             // GET MAIN PROJECT RECORD ID
             // EVERY OUT GOING KIT MUST HAVE HAD an hh_id LINKED TO a single record.
             $filter         = "[kit_household_code] = '" . $hh_id . "'";
             $fields         = array("record_id","hhd_participant_id","dep_1_participant_id","dep_2_participant_id");
             $q              = \REDCap::getData($this->main_project, 'json', null , $fields  , null, null, false, false, false, $filter);
             $main_results   = json_decode($q,true);
-            
+
             if(!empty($main_results)){
                 // there should only be one.
                 $main_record  = current($main_results);
@@ -439,12 +442,12 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
 
                 $upc_var            = null;
                 $qr_var             = null;
-                
+
                 $age_prefix         = "age";
                 $sex_prefix         = "sex";
                 $codename_prefix    = "codename";
                 $covid_prefix       = "covid1";
-                
+
                 //this just means no participant survey was filled out, but we still have an HHID! SO we can still update main record linkage
                 // FIND FIRST AVAILABLE EMPTY
                 $hhd    = $main_record["hhd_participant_id"];
@@ -493,7 +496,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         }
         return null;
     }
-    
+
     /**
      * Get records of completed invitation questionaires that have not had kits shipped yet
      * @return array of records
@@ -512,21 +515,21 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
     }
 
     /**
-     * generate per participant report 
+     * generate per participant report
      * @return array of recordids created
      */
     public function sendOneMonthFollowUps(){
         // put the proper project ids into class vars
         $this->getAllSupportProjects();
-        
-        $days_to_follow_up = 30; 
+
+        $days_to_follow_up = 30;
 
         // GET ALL SURVEYS THAT A FOLLOW UP HAS NOT BEEN SENT OUT
         $filter_logic = "[follow_up_link] = '' and [participant_id] <> '' and [household_id] <> ''";
         $params	= array(
-            "project_id"    => $this->kit_submission_project, 
+            "project_id"    => $this->kit_submission_project,
             'return_format' => 'json',
-			'fields'        => array(     "record_id", 
+			'fields'        => array(     "record_id",
                                           "household_id",
                                           "participant_id",
                                           "email", "email_s", "email_v", "email_m",
@@ -543,9 +546,9 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         $save_to_follow_up  = array();
         $map_fu_ks          = array();
         $next_fu_id         = $this->getNextAvailableRecordId($this->follow_up_project);
-        $i                  = 0; 
-        $now                = time(); 
-        
+        $i                  = 0;
+        $now                = time();
+
         foreach($results as $result){
             $ks_record_id   = $result["record_id"];
             $household_code = $result["household_id"];
@@ -556,7 +559,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
             $datediff       = $now - $check_date;
             $num_days       = floor($datediff / (60 * 60 * 24));
 
-            if($num_days >= $days_to_follow_up){ 
+            if($num_days >= $days_to_follow_up){
                 $map_fu_ks[$next_fu_id] = $ks_record_id;
                 $temp = array(
                     "record_id"         => $next_fu_id,
@@ -577,7 +580,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         if(empty($result["errors"])){
             foreach($result["ids"] as $id){
                 $survey_link = \REDCap::getSurveyLink($id, $instrument='cafacts_followup_survey', $event_id='', $instance=1, $project_id=$this->follow_up_project);
-                
+
                 $ks_id  = $map_fu_ks[$id];
                 $temp   = array(
                     "record_id"         => $ks_id,
@@ -592,14 +595,14 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
     }
 
     /**
-     * generate per participant report 
+     * generate per participant report
      * @return array of recordids created
      */
     public function householdPerParticipantReport(){
         $params	= array(
-            "project_id"    => $this->access_code_project, 
+            "project_id"    => $this->access_code_project,
             'return_format' => 'json',
-			'fields'        => array(     "record_id", 
+			'fields'        => array(     "record_id",
                                           "access_code"
                             ),
             'filterLogic'   => ""
@@ -611,11 +614,11 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
             $county_map[$ac["access_code"]] = $ac["record_id"];
         }
 
-        //SEARCH kit submission, GET ALL Records and their linked/null main record id 
+        //SEARCH kit submission, GET ALL Records and their linked/null main record id
         $params	= array(
-            "project_id"    => $this->main_project, 
+            "project_id"    => $this->main_project,
             'return_format' => 'json',
-			'fields'        => array(     "record_id", 
+			'fields'        => array(     "record_id",
                                           "access_code"
                                         , "kit_household_code"
                                         , "hhd_participant_id"
@@ -623,8 +626,8 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
                                         , "hhd_test_result"
                                         , "hhd_sex"
                                         , "hhd_age"
-                                        , "hhd_record_id" 
-                                        
+                                        , "hhd_record_id"
+
 
                                         , "dep_1_participant_id"
                                         , "dep_1_test_upc"
@@ -632,7 +635,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
                                         , "dep_1_sex"
                                         , "dep_1_age"
                                         , "dep_1_record_id"
-                                        
+
                                         , "dep_2_participant_id"
                                         , "dep_2_test_upc"
                                         , "dep_2_test_result"
@@ -642,7 +645,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
 
                                         , "city"
                                         , "census_tract"
-                                        
+
                             ),
             'filterLogic'   => ""
 		);
@@ -667,7 +670,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
                     $prefix = "dep_".$i;
                     $is_hdd = false;
                 }
-      
+
                 if(!empty($part_id)){
                     $part_ks    = $record[$prefix . "_record_id"];
                     $part_upc   = $record[$prefix . "_test_upc"];
@@ -705,9 +708,9 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         $no_match_ks            = array();
         $no_match_mp            = array();
 
-        //SEARCH kit submission, GET ALL Records and their linked/null main record id 
+        //SEARCH kit submission, GET ALL Records and their linked/null main record id
         $params	= array(
-            "project_id"    => $this->kit_submission_project, 
+            "project_id"    => $this->kit_submission_project,
             'return_format' => 'json',
 			'fields'        => array("record_id", "household_id", "participant_id", "survey_type", "household_record_id"),
             'filterLogic'   => "[participant_id] <> ''"
@@ -718,7 +721,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
             $part_id    = $record["participant_id"];
             $s_type     = $record["survey_type"];
             $all_submission[$part_id] = array(
-                "record_id"     => $record["record_id"], 
+                "record_id"     => $record["record_id"],
                 "survey_type"   => $s_type,
                 "household_record_id"   => $record["household_record_id"] ,
                 "household_id"          => $record["household_id"]
@@ -833,7 +836,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
                 $save_data_mp[$rec_id] = $temp;
             }else{
                 // $this->emDebug("no matching kit submission , record_id for " . $rec_id);
-                
+
                 $temp = array(
                     "participant" => "dep_2",
                     "participant_id" => $part_id,
@@ -900,23 +903,23 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
             "savedata_submission"   => $save_data_submission,
             "savedata_mp"           => $save_data_mp,
             "no_match_ks"           => $no_match_ks ,
-            "no_match_mp"           => $no_match_mp ,        
+            "no_match_mp"           => $no_match_mp ,
         );
-        
-    }  
+
+    }
     /**
      * Takes the result of a scan and sends off to Gauss to return ID
      * @return varchar unique house hold id
      */
 
     public function getHouseHoldId($qrscan){
-        // remove URL SCheme 
+        // remove URL SCheme
         //TODO FIX THIS BETTER LATER
         $qrscan = preg_replace( "#^[^:/.]*[:/]+#i", "", $qrscan );
         $qrscan = str_replace("/?","?",$qrscan);
         $temp   = explode("#",$qrscan);
         $qrscan = $temp[0];
-        // MIGHT HAVE TO DO SOME MORE CLEANING AFTER THE "#" 
+        // MIGHT HAVE TO DO SOME MORE CLEANING AFTER THE "#"
 
         $url        = "https://c19.gauss.com/artemis/decryptqr";
         $key        = "hRDauDM9We2B3YfQSMzRA7WowaHaOhv98b54LStQ";
@@ -931,12 +934,12 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
             curl_setopt($process, CURLOPT_SSL_VERIFYPEER, FALSE);
             curl_setopt($process, CURLOPT_HTTPHEADER, $headers );
             curl_setopt($process, CURLOPT_POSTFIELDS, $data);
-            
+
             $curlinfo   = curl_getinfo($process);
             $curlerror  = curl_error($process);
             $result     = curl_exec($process);
             curl_close($process);
-            
+
         } catch (Exception $e) {
             $this->emDebug("what happened",  $e->getMessage());
             exit( 'Decrypt API request failed: ' . $e->getMessage() );
@@ -959,7 +962,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
                     $q          = \REDCap::getData($pid, 'json', null , null  , null, null, false, false, false, $filter);
                     $results    = json_decode($q,true);
 
-                    $for_test   = in_array($this->access_code, array(123456,654321));
+                    $for_test   = in_array($this->access_code, array(123456,234567,345678,456789,567890));
 
                     foreach ($results as $result) {
                         $ac_code_record             = $result["record_id"];
@@ -981,11 +984,12 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
                         );
                         $r      = \REDCap::saveData($pid, 'json', json_encode(array($data)) );
 
+
                         //VERIFIY THAT THE CODE USED MATCHES ZIPCODE OF ADDRESS FOR IT
                         if($result['zip'] == $this->zip_code){
                             if(!empty($redeemed_participant_id) && !empty($redeemed_participant_date) && !$for_test){
                                 $this->emDebug("This Access Code has already been claimed on ", $redeemed_participant_date);
-                                
+
                                 // NO LONGER BLOCK ATTEMPTS BUT ADD INDICATOR THAT ITS BEEN CLAIMED
                                 // return false;
                             }
@@ -1009,7 +1013,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
                         $record_id = $result["record_id"];
                         return $record_id;
                     }
-                    
+
                     $this->emDebug("No match found for in HouseHold Id : ", $this->household_id );
                 }
             }
@@ -1026,10 +1030,10 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
             $temp = $this->getTempStorage($storekey);
             $temp[$k] = $v;
 
-            // THIS IS CAUSING TWILIO TO FAIL WHY? 
+            // THIS IS CAUSING TWILIO TO FAIL WHY?
             $this->setProjectSetting($storekey, json_encode($temp));
         }
-        return; 
+        return;
     }
 
     /**
@@ -1054,7 +1058,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         $this->removeProjectSetting($storekey);
         return;
     }
-    
+
     /**
      * Make a new redirect Action url, NOT IN USE NOW, BUT COULD POSSILBY BE USEFUL LATER
      * @param $action
@@ -1090,7 +1094,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
             $sp_val     = trim($data[2]);
             $zh_val     = trim($data[3]);
             $vi_val     = trim($data[4]);
-            
+
             $dict[$var_key] = array(
                 "en" => $en_val,
                 "es" => $sp_val,
@@ -1116,15 +1120,15 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
     */
     function getAssetUrl($audiofile = "v_languageselect.mp3", $hard_domain = ""){
         $audio_file = $this->framework->getUrl("getAsset.php?file=".$audiofile."&ts=". $this->getLastModified() , true, true);
-        
+
         if(!empty($hard_domain)){
             $audio_file = str_replace("http://localhost",$hard_domain, $audio_file);
         }
 
-        $this->emDebug("The NO AUTH URL FOR AUDIO FILE", $audio_file); 
+        $this->emDebug("The NO AUTH URL FOR AUDIO FILE", $audio_file);
         return $audio_file;
     }
-    
+
     function setLastModified(){
         $ts = time();
         $this->setSystemSetting("last_modified",$ts);
@@ -1182,7 +1186,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         return true;
     }
 
-    /* 
+    /*
         Parse CSV to batchupload test Results
     */
     public function parseResultsCSVtoDB($file){
@@ -1205,7 +1209,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
             }
             fclose($file);
         }
-        
+
         $success            = array();
         $failed             = array();
 
@@ -1279,17 +1283,17 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
                     }
                 }
             }else{
-                //Couldnt find the UPC in the main project?   
+                //Couldnt find the UPC in the main project?
                 $failed[] = $upc;
                 $this->emDebug("Couldnt find $upc in main project");
             }
-        }        
+        }
 
         $return = array( "total" => count($results), "success" => count($success), "failed" => $failed );
         return $return;
     }
- 
-    /* 
+
+    /*
         Parse CSV to batchupload test Results
     */
     public function parseResultsSentCSV($file){
@@ -1327,7 +1331,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
             }else if( in_array("Dependent 2 Test UPC", $headers) ){
                 $which_var = "dep_2_result_sent";
             }
-            
+
             if($which_var){
                 $temp = array(
                     "record_id"         => $main_record_id,
@@ -1338,7 +1342,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
             }else{
                 $this->emDebug("wtf couldnt find headers label?", $headers);
             }
-        }        
+        }
         $r  = \REDCap::saveData($this->main_project, 'json', json_encode($data) );
         if(empty($r["errors"])){
             $success = $r["item_count"];
@@ -1351,7 +1355,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         return $return;
     }
 
-    /* 
+    /*
         Parse CSV to batchupload test Results
     */
     public function parseUPCLinkCSVtoDB($file){
@@ -1361,7 +1365,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         $headers    = array();
         $results    = array();
 
-        //now we parse the CSV, and match the QR -> UPC 
+        //now we parse the CSV, and match the QR -> UPC
         if($file){
             while (($line = fgetcsv($file)) !== FALSE) {
                 if($header_row){
@@ -1375,7 +1379,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
             }
             fclose($file);
         }
-        
+
         $success        = array();
         $failed         = array();
 
@@ -1399,7 +1403,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
                     $which_upc              => $upcscan,
                     $which_qr               => $qrscan
                 );
-                
+
                 if($which_upc && $which_qr){
                     $r  = \REDCap::saveData($this->main_project, 'json', json_encode(array($temp)) );
                     if(!empty($r["errors"])){
@@ -1432,8 +1436,8 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
                 // $this->emDebug("No API results for qrscan for row $rowidx");
                 $failed[]   = $result;
             }
-        }        
-        
+        }
+
         $return = array( "total" => count($results), "success" => count($success), "failed" => $failed );
         return $return;
     }
@@ -1446,8 +1450,8 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
     */
     public function xpsCurl($api_url, $method="GET", $data=array()){
         $api_key = $this->getProjectSetting('xpsship-api-key');
-        
-        
+
+
         $ch = curl_init($api_url);
         $header_data = array( 'Authorization: RSIS ' . $api_key );
 
@@ -1470,17 +1474,17 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_HEADER, 0);
         curl_setopt($ch, CURLOPT_VERBOSE, 0);
-        
+
         $info 	= curl_getinfo($ch);
 		$result = curl_exec($ch);
         curl_close($ch);
-        
+
         return $result;
     }
 
 
-    /* 
-        Create ORDER for XPS 
+    /*
+        Create ORDER for XPS
     */
     public function xpsData($hh_id, $testkits, $shipping_addy){
         $weight_in_lb = array("0.325", "0.388", "0.475");
@@ -1533,7 +1537,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         );
 
        return $data;
-    }    
+    }
 
     /*
         CREATE USPS RETURN LABEL
@@ -1573,7 +1577,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         foreach($xml_arr as $key => $val){
             $root->appendChild($xmlDoc->createElement($key,$val));
         }
- 
+
         //make the output pretty
         $qs_params = urlencode( $xmlDoc->saveHTML() );
 
@@ -1585,22 +1589,22 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_HEADER, 0);
         curl_setopt($ch, CURLOPT_VERBOSE, 0);
-        
+
         $info 	= curl_getinfo($ch);
 		$result = curl_exec($ch);
         curl_close($ch);
 
-        $new    = simplexml_load_string($result); 
-  
-        // Convert into json 
-        $con    = json_encode($new); 
-  
-        // Convert into associative array 
-        return json_decode($con, true); 
+        $new    = simplexml_load_string($result);
+
+        // Convert into json
+        $con    = json_encode($new);
+
+        // Convert into associative array
+        return json_decode($con, true);
     }
 
     /*
-        Generate UNIQUE AC, Exclude already used ones. 
+        Generate UNIQUE AC, Exclude already used ones.
         returns base64 Return Label, PostalROuting and Tracking Number
     */
     public function UniqueRandomNumbersWithinRange($min, $max, $quantity) {
@@ -1626,7 +1630,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
     // Project Crons
 	public function projectCron($urls){
 		$projects 	= $this->framework->getProjectsWithModuleEnabled();
-		
+
 		foreach($projects as $index => $project_id){
 			foreach($urls as $url){
 				$thisUrl 	= $url . "&pid=$project_id"; //project specific
