@@ -364,7 +364,6 @@ if(isset($_POST["CallStatus"]) && $_POST["CallStatus"] == "in-progress"){
 	}
 }
 
-$module->emDebug("speak the reposne", $response);
 print($response);
 $response->pause(['length' => 1]);
 $response->hangup();

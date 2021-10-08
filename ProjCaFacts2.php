@@ -412,6 +412,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
             "participant" => array("survey_url" => $survey_link, "complete" => $survey_complete)
         );
 
+        $this->emDebug("returning blood collection survey url", $return_data);
         header("Content-type: application/json");
         echo json_encode($return_data);
     }
@@ -427,9 +428,11 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
 
             // GET MAIN PROJECT RECORD ID
             // EVERY OUT GOING KIT MUST HAVE HAD an hh_id LINKED TO a single record.
+            $event_id       = \REDCap::getEventIdFromUniqueEvent("baseline_arm_1");
+
             $filter         = "[kit_household_code] = '" . $hh_id . "'";
             $fields         = array("record_id","hhd_participant_id","dep_1_participant_id","dep_2_participant_id");
-            $q              = \REDCap::getData($this->main_project, 'json', null , $fields  , null, null, false, false, false, $filter);
+            $q              = \REDCap::getData($this->main_project, 'json', null , $fields  , $event_id, null, false, false, false, $filter);
             $main_results   = json_decode($q,true);
 
             if(!empty($main_results)){
@@ -946,6 +949,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         }
 
         $j = json_decode($result,1);
+
         return array("survey_id" => $j['survey_id'] , "household_id" => $j['household_id']);
     }
 
