@@ -380,6 +380,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         // AT THIS POINT WE SHOULD HAVE THE RECORD_ID OF THE KITSUBMISSION THAT MATCHES THE INPUT
         $record_id          = $kit_submit_record_id["main_id"];
         $bc_event_arm       = $kit_submit_record_id["event_arm"];
+        $this->emDebug("what the freak event arm", $record_id, $bc_event_arm, $kit_submit_record_id);
 
         $event_id           = \REDCap::getEventIdFromUniqueEvent($bc_event_arm);
         $instrument         = 'language_select'; //english_adultchild_survey
