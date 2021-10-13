@@ -919,39 +919,34 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         // remove URL SCheme
         $url        = "https://c19.exahealth.com/artemis/decryptqr";
         $key        = "hRDauDM9We2B3YfQSMzRA7WowaHaOhv98b54LStQ";
-        $data       = "encrypted_qrcode_data=$qrscan";
-
+        $headers    = array(
+            "x-api-key: " . $key,
+            "cache-control: no-cache",
+            "content-type: application/json" ,
+            "User-Agent: PHPCurlFromREDCapWebServer/1.2.3"
+        );
+        $data       = json_encode( array("encrypted_qrcode_data" => $qrscan) );
         try {
-            $curl = curl_init();
-            curl_setopt_array($curl, array(
-                CURLOPT_URL => $url,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_ENCODING => "",
-                CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 30,
-                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                CURLOPT_CUSTOMREQUEST => "POST",
-                CURLOPT_POSTFIELDS => $data,
-                CURLOPT_HTTPHEADER => array(
-                    "cache-control: no-cache",
-                    "content-type: application/x-www-form-urlencoded",
-                    "x-api-key: $key"
-                ),
-            ));
+            $process = curl_init($url);
+            curl_setopt($process, CURLOPT_TIMEOUT, 30);
+            curl_setopt($process, CURLOPT_RETURNTRANSFER, TRUE);
+            curl_setopt($process, CURLOPT_SSL_VERIFYPEER, FALSE);
+            curl_setopt($process, CURLOPT_HTTPHEADER, $headers );
+            curl_setopt($process, CURLOPT_POST, 1);
+            curl_setopt($process, CURLOPT_POSTFIELDS, $data);
+            curl_setopt($process, CURLINFO_HEADER_OUT, TRUE);
 
-            $result   = curl_exec($curl);
-            $err        = curl_error($curl);
-            curl_close($curl);
+            $result     = curl_exec($process);
+            $curlinfo   = curl_getinfo($process);
+            $curlerror  = curl_error($process);
 
-            if ($err) {
-                $this->emDebug("cURL Error #:" . $err);
-            }
-            $this->emDebug("why wont the php curl copied from postman work?", $result);
+            curl_close($process);
         } catch (Exception $e) {
             $this->emDebug("what happened",  $e->getMessage());
             exit( 'Decrypt API request failed: ' . $e->getMessage() );
         }
         $j = json_decode($result,1);
+        $this->emDebug("decoded QR",$qrscan, $j);
         return array("survey_id" => $j['survey_id'] , "household_id" => $j['household_id']);
     }
 
