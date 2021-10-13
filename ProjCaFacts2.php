@@ -380,7 +380,6 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         // AT THIS POINT WE SHOULD HAVE THE RECORD_ID OF THE KITSUBMISSION THAT MATCHES THE INPUT
         $record_id          = $kit_submit_record_id["main_id"];
         $bc_event_arm       = $kit_submit_record_id["event_arm"];
-        $this->emDebug("what the freak event arm", $record_id, $bc_event_arm, $kit_submit_record_id);
 
         $event_id           = \REDCap::getEventIdFromUniqueEvent($bc_event_arm);
         $instrument         = 'language_select'; //english_adultchild_survey
@@ -918,39 +917,41 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
 
     public function getHouseHoldId($qrscan){
         // remove URL SCheme
-        //TODO FIX THIS BETTER LATER
-        $qrscan = preg_replace( "#^[^:/.]*[:/]+#i", "", $qrscan );
-        $qrscan = str_replace("/?","?",$qrscan);
-        $temp   = explode("#",$qrscan);
-        $qrscan = $temp[0];
-        // MIGHT HAVE TO DO SOME MORE CLEANING AFTER THE "#"
-
-        $url        = "https://c19.gauss.com/artemis/decryptqr";
+        $url        = "https://c19.exahealth.com/artemis/decryptqr";
         $key        = "hRDauDM9We2B3YfQSMzRA7WowaHaOhv98b54LStQ";
-        $headers    = array( "x-api-key: " . $key );
         $data       = "encrypted_qrcode_data=$qrscan";
 
         try {
-            // $resp = requests.post(url, data = data, headers = headers)
-            $process = curl_init($url);
-            curl_setopt($process, CURLOPT_TIMEOUT, 30);
-            curl_setopt($process, CURLOPT_RETURNTRANSFER, TRUE);
-            curl_setopt($process, CURLOPT_SSL_VERIFYPEER, FALSE);
-            curl_setopt($process, CURLOPT_HTTPHEADER, $headers );
-            curl_setopt($process, CURLOPT_POSTFIELDS, $data);
+            $curl = curl_init();
+            curl_setopt_array($curl, array(
+                CURLOPT_URL => $url,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_ENCODING => "",
+                CURLOPT_MAXREDIRS => 10,
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                CURLOPT_CUSTOMREQUEST => "POST",
+                CURLOPT_POSTFIELDS => $data,
+                CURLOPT_HTTPHEADER => array(
+                    "cache-control: no-cache",
+                    "content-type: application/x-www-form-urlencoded",
+                    "x-api-key: $key"
+                ),
+            ));
 
-            $curlinfo   = curl_getinfo($process);
-            $curlerror  = curl_error($process);
-            $result     = curl_exec($process);
-            curl_close($process);
+            $result   = curl_exec($curl);
+            $err        = curl_error($curl);
+            curl_close($curl);
 
+            if ($err) {
+                $this->emDebug("cURL Error #:" . $err);
+            }
+            $this->emDebug("why wont the php curl copied from postman work?", $result);
         } catch (Exception $e) {
             $this->emDebug("what happened",  $e->getMessage());
             exit( 'Decrypt API request failed: ' . $e->getMessage() );
         }
-
         $j = json_decode($result,1);
-
         return array("survey_id" => $j['survey_id'] , "household_id" => $j['household_id']);
     }
 
