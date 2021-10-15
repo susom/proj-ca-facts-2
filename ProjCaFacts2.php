@@ -380,9 +380,11 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         // AT THIS POINT WE SHOULD HAVE THE RECORD_ID OF THE KITSUBMISSION THAT MATCHES THE INPUT
         $record_id          = $kit_submit_record_id["main_id"];
         $bc_event_arm       = $kit_submit_record_id["event_arm"];
+        $is_hh              = $kit_submit_record_id["is_hh"];
 
         $event_id           = \REDCap::getEventIdFromUniqueEvent($bc_event_arm);
-        $instrument         = 'language_select'; //english_adultchild_survey
+
+        $instrument         = $is_hh ? 'language_select_hh' : 'language_select_bc'; //english_adultchild_survey
 
         //GET PUBLIC SURVEY URL FOR THAT RECORD TO SEND BACK TO GAUSS TO DISPLAY TO THE USER
         $survey_link        = \REDCap::getSurveyLink($record_id, $instrument, $event_id, $instance=1, $project_id=$this->main_project);
@@ -457,11 +459,13 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
                 $dep1   = $main_record["dep_1_participant_id"];
                 $dep2   = $main_record["dep_2_participant_id"];
 
+                $is_hh  = false;
                 if( empty($hhd) || (!empty($hhd) && $hhd == $part_id) ){
                     $matching_var   = "hhd_participant_id";
                     $upc_var        = "hhd_test_upc";
                     $qr_var         = "hhd_test_qr";
                     $bc_event_arm   = "head_of_household_arm_1";
+                    $is_hh          = true;
                 }else if( empty($dep1) || (!empty($dep1) && $dep1 == $part_id) ){
                     $matching_var   = "dep_1_participant_id";
                     $upc_var        = "dep_1_test_upc";
@@ -487,7 +491,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
                     // $this->emDebug("No KS result found for $part_id save to matching $hh_id");
                 }
 
-                $matched_result = array("upc_var" => $upc_var, "qr_var" => $qr_var, "participant_id" => $part_id, "main_id" => $main_record["record_id"], "all_matches" => $ks_results, "event_arm" => $bc_event_arm);
+                $matched_result = array("upc_var" => $upc_var, "qr_var" => $qr_var, "is_hh" => $is_hh ,"participant_id" => $part_id, "main_id" => $main_record["record_id"], "all_matches" => $ks_results, "event_arm" => $bc_event_arm);
                 return $matched_result;  // can be null
             }else{
                 //every HH_id shoudl be accounted for since its required to ship out
