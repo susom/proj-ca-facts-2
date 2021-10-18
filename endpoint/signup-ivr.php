@@ -2,6 +2,10 @@
 namespace Stanford\ProjCaFacts2;
 /** @var \Stanford\ProjCaFacts2\ProjCaFacts2 $module */
 
+// Turn off all error reporting
+error_reporting(0);
+$module->emDebug("what the fuck now? redcap? or twilio caching?");
+
 require $module->getModulePath().'vendor/autoload.php';
 use Twilio\TwiML\VoiceResponse;
 
@@ -59,7 +63,7 @@ if(!empty($_POST["RecordingSid"]) && !empty($_POST["RecordingUrl"]) ){
 
 // FIRST CONTACT
 if(isset($_POST["CallStatus"]) && $_POST["CallStatus"] == "ringing"){
-	$module->emDebug("First Contact");
+	$module->emDebug("First Contact You Dweeb");
 
 	// Say Welcome
 	$response->say($dict["welcome"][$lang], array('voice' => $speaker, 'language' => $accent));
@@ -93,7 +97,6 @@ if(isset($_POST["CallStatus"]) && $_POST["CallStatus"] == "ringing"){
 
 		// use the <Say> verb to request input from the user
 		if($lang == "vi"){
-			$module->emDebug("language VIetnamese play mp3", $module->getAssetUrl("v_languageselect.mp3"));
 			$gather->play($module->getAssetUrl("v_languageselect.mp3"));
 		}else{
 			$gather->say($prompt, ['voice' => $speaker, 'language' => $accent] );
@@ -103,10 +106,13 @@ if(isset($_POST["CallStatus"]) && $_POST["CallStatus"] == "ringing"){
 
 // ALL SUBSEQUENT RESPONSES WILL HIT THIS SAME ENDPOINT , DIFFERENTIATE ON "action"
 // TODO ONCE GET FLOW IN, NEED TO TIDY/ORGANIZE IT NEATLY
+
 if(isset($_POST["CallStatus"]) && $_POST["CallStatus"] == "in-progress"){
 	$response->pause(['length' => 1]);
+    $module->emDebug("FUCK CANT ANYTHING EVER BE EASY?", $_POST);
 
 	if($action == "interest-thanks"){
+
 		$response->say($dict["interest-thanks"][$lang], ['voice' => $speaker, 'language' => $accent]);
 		$response->pause(['length' => 1]);
 
@@ -313,6 +319,7 @@ if(isset($_POST["CallStatus"]) && $_POST["CallStatus"] == "in-progress"){
 		// DELETE THE TEMP STORAGE?
 		$module->removeTempStorage($temp_call_storage_key);
 	}else{
+        $module->emDebug("QUESTION #2");
 		// SET LANGUAGE (into SESSION) AND PROMPT FOR Kit Order / Questions
 		switch($choice){
 			case 2:
@@ -354,7 +361,6 @@ if(isset($_POST["CallStatus"]) && $_POST["CallStatus"] == "in-progress"){
 		// GATHER RESPONSE FOR NEXT CALL/RESPONSE
 		$gather 	= $response->gather(['numDigits' => 1]);
 		if($lang == "vi"){
-			$module->emDebug("language VIetnamese play mp3");
 			$gather->play($module->getAssetUrl("v_calltype.mp3"));
 		}else{
 			$gather->say($dict["call-type"][$lang], ['voice' => $speaker, 'language' => $accent] );

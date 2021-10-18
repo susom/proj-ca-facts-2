@@ -32,7 +32,7 @@ $XML_KO_PROJECT_TEMPLATE = $module->getUrl("docs/CAFACTS20MAINPROJECT_2021-05-19
 
     <br>
     <br>
-    
+
     <?php
         if($module->getProjectSetting("em-mode") == "kit_order"){
     ?>
@@ -52,7 +52,7 @@ $XML_KO_PROJECT_TEMPLATE = $module->getUrl("docs/CAFACTS20MAINPROJECT_2021-05-19
 
         <h4>Twilio Callback Endpoint</h4>
         <p>Please configure the twilio phone number to callback the following url:</p>
-        <pre><?php echo $module->getUrl("pages/signup-ivr.php",true, true ) ?></pre>
+        <pre><?php echo $module->getUrl("endpoint/signup-ivr.php",true, true ) ?></pre>
     <?php
         }
     ?>
