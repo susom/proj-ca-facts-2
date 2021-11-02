@@ -34,7 +34,7 @@ if(!empty($_POST["action"])){
                     ,"address2" => $addy2
                     ,"city" => $city
                     ,"state" => $state
-                    ,"zip" => $zip 
+                    ,"zip" => $zip
                     ,"recordid" => $record_id
                 );
                 $shipping_data  = $module->xpsData($hh_id, $testpeople, $shipping_addy);
@@ -52,7 +52,7 @@ if(!empty($_POST["action"])){
 
                 // Pre Generates Records in Kit Submission Project
                 // $module->linkKits($record_id, $testpeople, $hh_id, $part_id);
-            } 
+            }
         break;
 
         case "printLabel":
@@ -72,13 +72,34 @@ if(!empty($_POST["action"])){
                 $q          = \REDCap::getData('json', array($record_id) , $fields);
                 $results    = json_decode($q,true);
                 $record     = current($results);
-                
+
                 $result     = $module->uspsReturnLabel($record["kit_household_code"], $record);
                 $data   = array(
                     "record_id"                 => $record_id,
                     "return_tracking_number"    => $result["TrackingNumber"]
                 );
                 $r      = \REDCap::saveData('json', json_encode(array($data)) );
+            }
+        break;
+
+        case "bulkReturnLabels":
+            $module->emDebug("trying to print bulk Return Labels");
+            $result = $module->uspsReturnLabel();
+        break;
+
+        case "linkReturnTracking":
+            $record_id          = $_POST["record_id"] ?? null;
+            $return_tracking    = $_POST["return_tracking"] ?? null;
+
+            $result             = array();
+            if($record_id){
+                $data   = array(
+                    "record_id"                 => $record_id,
+                    "return_tracking_number"    => $return_tracking
+                );
+
+                $r      = \REDCap::saveData('json', json_encode(array($data)) );
+                $result["success"] = $data;
             }
         break;
 
@@ -102,6 +123,7 @@ if(!empty($_POST["action"])){
 
 require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
 
+$loading_gif = $module->getUrl("docs/images/icon_loading.gif");
 $em_mode = $module->getProjectSetting("em-mode");
 if($em_mode != "kit_order"){
     ?>
@@ -128,15 +150,12 @@ if($em_mode != "kit_order"){
         <br> <b>testpeople</b> is <em>not empty</em>
         <br> <b>kit_household_code</b> is <em>empty</em>
         <br> <b>xps_booknumber</b> is <em>empty</em></p>
-    <br>
-    <br>
 
+    <div><a href="#" id="bulk_return_labels" class="float-right btn btn-primary" style="color:#fff">Print 10 Bulk Return Labels</a></div>
+    <br><br>
     <?php
         $lang_pretty    = array("English", "Spanish", "Vietnamese", "Chinese");
         $lang_suffix    = array("","_s","_v","_m");
-
-        
-
 
         $qrscan_src = $module->getUrl("docs/images/fpo_qr_bar.png");
         $label_src  = $module->getUrl("docs/images/ico_printlabel.png");
@@ -172,10 +191,10 @@ if($em_mode != "kit_order"){
                     $search_data = array( "keyword" => $invite["kit_household_code"] );
                     $xps_return  = $module->xpsCurl("https://xpsshipper.com/restapi/v1/customers/$xps_client_id/searchShipments", "POST", json_encode($search_data) );
                     $xps_json    = json_decode($xps_return,1);
-                    
+
                     if(!empty($xps_json["shipments"])){
                         $booked_shipment_info = current($xps_json["shipments"]);
-                        
+
                         if(!empty($booked_shipment_info["bookNumber"])){
                             $booknumber = $booked_shipment_info["bookNumber"];
                             // UPDATE RECORD IN REDCAP
@@ -191,14 +210,15 @@ if($em_mode != "kit_order"){
                         $dumphtml[] = '<strong>Household ID : '.$invite["kit_household_code"].'</strong><a href="https://xpsshipper.com/ec/#/batch" class="xps" target="_blank">Process booking numbers on XPSship.com</a>';
                     }
                 }
-                
+
                 if($booknumber != "pending"){
                     $xps_return  = $module->xpsCurl("https://xpsshipper.com/restapi/v1/customers/$xps_client_id/shipments/$booknumber/label/PDF");
                     $dumphtml[] = '<a href="#" class="printlabel" data-recordid='.$invite["record_id"].' data-booknumber='.$booknumber.'>Print Label</a>';
                     $dumphtml[] = '<a href="#" class="printReturnlabel" data-recordid='.$invite["record_id"].'>Print Return Label</a>';
+                    $dumphtml[] = "<input type='text' class='linkReturnLabel' data-recordid='".$invite["record_id"]."' id='record_".$invite["record_id"]."' placeholder='Link Return Tracking #'/>";
                 }
             }else{
-                $dumphtml[] = "<input type='text' name='kit_qr_code' 
+                $dumphtml[] = "<input type='text' name='kit_qr_code'
                 data-addy1='".$invite["address_1"]."' data-addy2='".$invite["address_2"]."' data-city='".$invite["city"]."' data-state='".$invite["state"]."' data-zip='".$invite["zip"]."'
                 data-numkits='". $invite[$testpeople_lang] ."' data-recordid='".$invite["record_id"]."' id='record_".$invite["record_id"]."'/><label for='record_".$invite["record_id"]."'></label>";
             }
@@ -209,11 +229,18 @@ if($em_mode != "kit_order"){
         $dumphtml[]     = "</tbody>";
     ?>
     <style>
+        #bulk_return_labels.loading {
+            background-image:url(<?=$loading_gif?>) ;
+            background-repeat:no-repeat;
+            background-size:contain;
+            padding-left:32px;
+        }
+
         #pending_invites .numkits {
-            text-align:center; 
+            text-align:center;
             font-size:150%;
             color:deeppink;
-            font-weight:bold; 
+            font-weight:bold;
         }
 
         #pending_invites input[name='kit_qr_code']{
@@ -263,7 +290,7 @@ if($em_mode != "kit_order"){
             color:blue;
             cursor:pointer;
         }
-       
+
         .qrscan .printlabel,
         .qrscan .printReturnlabel{
             text-decoration:none;
@@ -322,10 +349,11 @@ if($em_mode != "kit_order"){
     </table>
     <script>
         $(document).ready(function(){
-            // UI UX 
+            // UI UX
             $("input[name='kit_qr_code']").blur(function(){
                 $(this).hide();
             })
+
             $(".qrscan label").click(function(){
                 var forid = $(this).attr("for");
                 $("#"+forid).show().focus();
@@ -375,13 +403,41 @@ if($em_mode != "kit_order"){
                         var book_on_xps = $("<a>").attr("href","https://xpsshipper.com/ec/#/batch").addClass("xps").attr("target", "_blank").text("Process booking numbers on XPSship.com");
                         par.append(book_on_xps);
                         // var printlabel  = $("<a>").attr("href","#").addClass("printlabel").attr("data-recordid",record_id).text("Print Label");
-                        // par.append(printlabel); 
+                        // par.append(printlabel);
                     }else{
                         _el.addClass("failed");
                     }
                 }).fail(function () {
                     console.log("something failed");
                 });
+            });
+
+            // TAKING SCAN INPUT OF RETURN LABEL LINK TO RECORD ID
+            $("input.linkReturnLabel").on("input",function(){
+                var _el = $(this);
+                setTimeout(function(){
+                    var return_track    = _el.val();
+                    var record_id       = _el.attr("data-recordid");
+                    $.ajax({
+                        method: 'POST',
+                        data: {
+                            "action"            : "linkReturnTracking",
+                            "return_tracking"   : return_track,
+                            "record_id"         : record_id
+                        },
+                        dataType: 'json'
+                    }).done(function (result) {
+                        console.log("return tracking linked ", result);
+                        _el.css("color","green");
+                        _el.blur();
+                    }).fail(function () {
+                        console.log("something failed");
+                        _el.css("color","red");
+                        _el.val("");
+                        _el.attr("placeholder","Error, Scan Again");
+                        _el.focus();
+                    });
+                }, 1000);
             });
 
             // PRINT LABEL
@@ -396,7 +452,8 @@ if($em_mode != "kit_order"){
                             "action"    : "printLabel",
                             "record_id"     : record_id,
                             "booknumber"    : booknumber
-                    }
+                    },
+
                 }).done(function (result) {
                     var base64_return_label = result;
                     console.log("label pdf", base64_return_label);
@@ -406,7 +463,7 @@ if($em_mode != "kit_order"){
                         "<iframe width='100%' height='100%' src='data:application/pdf;base64, " +
                         encodeURI(base64_return_label) + "'></iframe>"
                     )
-                
+
 
                     // var pdf_url = '<?= $pdf_printlabel_url ?>' + "&" + $.param(result["address"][0]);
                     // var w = 600;
@@ -450,7 +507,7 @@ if($em_mode != "kit_order"){
                 if($(this).is(":checked")){
                     var record_id   = $(this).data("recordid");
                     var _this       = $(this);
-                    // CHECKING WILL SET THE SHIPPED DATE 
+                    // CHECKING WILL SET THE SHIPPED DATE
                     $.ajax({
                         method: 'POST',
                         data: {
@@ -468,8 +525,50 @@ if($em_mode != "kit_order"){
                     });
                 }
             });
+
+            $("#bulk_return_labels").click(function(e){
+                e.preventDefault();
+                var _el = $(this);
+                _el.addClass("loading");
+
+                $.ajax({
+                    method: 'POST',
+                    data: {
+                        "action"    : "bulkReturnLabels"
+                    },
+                    dataType: 'json'
+                }).done(function (ajax_success) {
+                    var w       = window.open();
+                    var html    = $("<div>");
+
+
+                    for(var i in ajax_success) {
+                        var label = ajax_success[i];
+                        var return_label = label["ReturnLabel"];
+                        var tracking_num = label["TrackingNumber"];
+
+
+                        var obj = $("<object>");
+                        var emb = $("<embed>");
+                        emb.attr("src", "data:application/pdf;base64," + return_label );
+                        emb.attr("width","100%");
+                        emb.attr("height","600");
+                        emb.attr("type","text/html");
+                        obj.append(emb);
+
+                        console.log("printing tracking_num",tracking_num );
+                        html.append(obj);
+                    }
+
+                    $(w.document.body).html(html);
+                    _el.removeClass("loading");
+
+                }).fail(function () {
+                    console.log("something failed");
+                });
+            });
         });
     </script>
 </div>
-<?php } 
+<?php }
 ?>

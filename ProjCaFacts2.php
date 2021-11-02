@@ -1130,7 +1130,6 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
             $audio_file = str_replace("http://localhost",$hard_domain, $audio_file);
         }
 
-        $this->emDebug("The NO AUTH URL FOR AUDIO FILE", $audio_file);
         return $audio_file;
     }
 
@@ -1548,64 +1547,109 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         CREATE USPS RETURN LABEL
         returns base64 Return Label, PostalROuting and Tracking Number
     */
-    public function uspsReturnLabel($hh_id, $shipping_addy){
+    public function uspsReturnLabel($hh_id="CA Facts 2.0 Participant", $shipping_addy=array()){
         $merchant_id    = $this->getProjectSetting('usps-merchant-id');
         $mid            = $this->getProjectSetting('usps-mid');
 
         $usps_apiurl    = "https://returns.usps.com/Services/ExternalCreateReturnLabel.svc/ExternalCreateReturnLabel?externalReturnLabelRequest=";
 
         $xml_arr        = array(
-             "CustomerName"         => $participant_id
-            ,"CustomerAddress1"     => $shipping_addy["address_1"]
-            ,"CustomerCity"         => $shipping_addy["city"]
-            ,"CustomerState"        => $shipping_addy["state"]
-            ,"CustomerZipCode"      => $shipping_addy["zip"]
-            ,"MerchantAccountID"    => $merchant_id
-            ,"MID"                  => $mid
-            ,"BlankCustomerAddress" => TRUE
-            ,"LabelFormat"          => "NOI"
-            ,"LabelDefinition"      => "4X6"
-            ,"ServiceTypeCode"      => "020"
+             "MerchantAccountID"            => $merchant_id
+            ,"MID"                          => $mid
+            ,"BlankCustomerAddress"         => TRUE
+            ,"LabelFormat"                  => "NOI"
+            ,"LabelDefinition"              => "4X6"
+            ,"ServiceTypeCode"              => "020"
             ,"MerchandiseDescription"       => "Exempt Human Specimen"
-            ,"PackageInformation"   => "RC".$shipping_addy["record_id"]
+            ,"PackageInformation"           => "CAFacts2"
             ,"AddressOverrideNotification"  => TRUE
             ,"CallCenterOrSelfService"      => "Customer"
-            ,"ImageType"                    => "PNG"
+            ,"ImageType"                    => "PDF"
         );
 
-        if(!empty($shipping_addy["address_2"])){
-            $xml_arr["CustomerAddress2"] = $shipping_addy["address_2"];
+        if(!empty($shipping_addy)){
+            $xml_arr["PackageInformation"]  = "RC".$shipping_addy["record_id"];
+            $xml_arr["CustomerName"]        = $hh_id;
+            $xml_arr["CustomerAddress1"]    = $shipping_addy["address_1"];
+            $xml_arr["CustomerCity"]        = $shipping_addy["city"];
+            $xml_arr["CustomerState"]       = $shipping_addy["state"];
+            $xml_arr["CustomerZipCode"]     = $shipping_addy["zip"];
+
+            if(!empty($shipping_addy["address_2"])){
+                $xml_arr["CustomerAddress2"] = $shipping_addy["address_2"];
+            }
+
+            $xmlDoc = new \DOMDocument();
+            $root   = $xmlDoc->appendChild($xmlDoc->createElement("ExternalReturnLabelRequest"));
+            foreach($xml_arr as $key => $val){
+                $root->appendChild($xmlDoc->createElement($key,$val));
+            }
+
+            //make the output pretty
+            $qs_params = urlencode( $xmlDoc->saveHTML() );
+
+            $ch = curl_init($usps_apiurl.$qs_params);
+
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 105200);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HEADER, 0);
+            curl_setopt($ch, CURLOPT_VERBOSE, 0);
+
+            $info 	= curl_getinfo($ch);
+            $result = curl_exec($ch);
+            curl_close($ch);
+
+            $new    = simplexml_load_string($result);
+
+            // Convert into json
+            $con    = json_encode($new);
+
+            // Convert into associative array
+            return json_decode($con, true);
+        }else{
+            $this->emDebug("seriously what the fuck now? 10 too many? how about 5");
+
+            $bulk   = 10;
+            $con    = array();
+
+            $xmlDoc = new \DOMDocument();
+            $root   = $xmlDoc->appendChild($xmlDoc->createElement("ExternalReturnLabelRequest"));
+            foreach($xml_arr as $key => $val){
+                $root->appendChild($xmlDoc->createElement($key,$val));
+            }
+            $saved_xml = $xmlDoc->saveHTML();
+            for($i = 0; $i < $bulk; $i++){
+                //make the output pretty
+                $qs_params = urlencode( $saved_xml );
+
+                $ch = curl_init($usps_apiurl.$qs_params);
+
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 105200);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_HEADER, 0);
+                curl_setopt($ch, CURLOPT_VERBOSE, 0);
+
+                $info 	= curl_getinfo($ch);
+                $result = curl_exec($ch);
+                curl_close($ch);
+
+                $new    = simplexml_load_string($result);
+
+                // Convert into json
+                $wut    = json_encode($new);
+
+
+                // Convert into json
+                $con[]  = json_decode($wut, true);
+            }
+
+            // Convert into associative array
+            return $con;
         }
-
-        $xmlDoc = new \DOMDocument();
-        $root   = $xmlDoc->appendChild($xmlDoc->createElement("ExternalReturnLabelRequest"));
-        foreach($xml_arr as $key => $val){
-            $root->appendChild($xmlDoc->createElement($key,$val));
-        }
-
-        //make the output pretty
-        $qs_params = urlencode( $xmlDoc->saveHTML() );
-
-        $ch = curl_init($usps_apiurl.$qs_params);
-
-		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
-		curl_setopt($ch, CURLOPT_TIMEOUT, 105200);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLOPT_HEADER, 0);
-        curl_setopt($ch, CURLOPT_VERBOSE, 0);
-
-        $info 	= curl_getinfo($ch);
-		$result = curl_exec($ch);
-        curl_close($ch);
-
-        $new    = simplexml_load_string($result);
-
-        // Convert into json
-        $con    = json_encode($new);
-
-        // Convert into associative array
-        return json_decode($con, true);
     }
 
     /*
