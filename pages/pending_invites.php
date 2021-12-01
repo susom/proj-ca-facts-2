@@ -178,8 +178,8 @@ if($em_mode != "kit_order"){
 
             $addy_bot   = $invite["city"] . ", " . $invite["state"] . " " . $invite["zip"];
             $dumphtml[] = "<tr>";
-            $dumphtml[] = "<td class='record_id'><a href='https://redcap.stanford.edu/redcap_v10.2.1/DataEntry/index.php?pid=19070&page=shipping&id=".$invite["record_id"]."&event_id=114529'><b>". $invite["record_id"] ."</b></a></td>";
-            $dumphtml[] = "<td class='ac'>". $invite["code"] ."</td>";
+            $dumphtml[] = "<td class='record_id'><a href='https://redcap.stanford.edu/redcap_v11.4.0/DataEntry/index.php?pid=23199&page=shipping&id=".$invite["record_id"]."&event_id=136532'><b>". $invite["record_id"] ."</b></a></td>";
+            $dumphtml[] = "<td class='ac'>". $invite["access_code"] ."</td>";
             $dumphtml[] = "<td class='addy'>". $addy_top . "<br>" . $addy_bot ."</td>";
             $dumphtml[] = "<td class='paper $paper_yn'><b>$paper_yn</b></td>";
             $dumphtml[] = "<td class='lang $lang_yn'>". $lang_pretty[$language-1] ."</td>";
