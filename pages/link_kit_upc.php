@@ -395,26 +395,34 @@ $em_mode = $module->getProjectSetting("em-mode");
                             var row = $("<tr>");
                             var idx = $("<th>").text("CSV ROW #");
                             var rid = $("<th>").text("Redcap ID");
-                            var qr  = $("<th>").text("QR");
+                            var hid = $("<th>").text("HH ID");
+                            var sid = $("<th>").text("Part ID");
                             var upc = $("<th>").text("UPC");
+                            var qr  = $("<th>").text("QR");
                             row.append(idx);
-                            row.append(rid);
-                            row.append(qr);
+                            row.append(rid)
+                            row.append(hid)
+                            row.append(sid);
                             row.append(upc);
+                            row.append(qr);
                             failed.append(row);
 
                             for(var i in fail_records){
                                 var fr  = fail_records[i];
                                 var row = $("<tr>");
                                 var idx = $("<td>").text(fr["row"]);
+                                var hid = $("<td>").text(fr["hh_id"]);
+                                var sid = $("<td>").text(fr["survey_id"]);
                                 var qr  = $("<td>").addClass("qrrow").text(fr["qrscan"]);
                                 var upc = $("<td>").text(fr["upcscan"]);
                                 var rid = fr["kitsub"] && fr["kitsub"].hasOwnProperty("main_id") ? $("<td>").text(fr["kitsub"]["main_id"]) : $("<td>").text("Not Found");
 
                                 row.append(idx);
                                 row.append(rid);
-                                row.append(qr);
+                                row.append(hid);
+                                row.append(sid);
                                 row.append(upc);
+                                row.append(qr);
 
                                 failed.append(row);
                             }

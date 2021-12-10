@@ -1416,8 +1416,8 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
                         $success[]  = $mainid;
                     }
                 }else{
+                    $this->emDebug("no upc_var , or qr_var for record $mainid", $hh_part[self::SURVEY_ID], $api_result);
                     $failed[]   = array("row" => $rowidx+1, "qrscan" => $qrscan, "upcscan" => $upcscan, "hh_id" => $hh_part[self::HOUSEHOLD_ID], "survey_id" => $hh_part[self::SURVEY_ID], "kitsub" => $api_result);
-                    $this->emDebug("no upc_var , or qr_var for record $mainid");
                 }
             }
 
