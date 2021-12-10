@@ -437,6 +437,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
             $q              = \REDCap::getData($this->main_project, 'json', null , $fields  , $event_id, null, false, false, false, $filter);
             $main_results   = json_decode($q,true);
 
+            $this->emDebug($household_id, $participant_id,$main_results);
             if(!empty($main_results)){
                 // there should only be one.
                 $main_record  = current($main_results);
@@ -498,8 +499,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
                 $this->emDebug("NO matching records in Main Project", $hh_id);
             }
         }else{
-            //should be 7 only
-            $this->emDebug("API didn't return anything for this qrscan", $qrscan);
+            $this->emDebug("API didn't return anything for this qrscan", $household_id, $participant_id);
         }
         return null;
     }
@@ -1386,7 +1386,6 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
 
         $success        = array();
         $failed         = array();
-
         foreach($results as $rowidx => $result){
             $qrscan     = $result[0];
             $upcscan    = $result[1];
@@ -1412,12 +1411,13 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
                     $r  = \REDCap::saveData($this->main_project, 'json', json_encode(array($temp)) );
                     if(!empty($r["errors"])){
                         $this->emDebug("ERROR saving to main project, the UPC and main record_id", $rowidx, $r);
-                        $failed[]   = $rowidx;
+                        $failed[]   = array("row" => $rowidx+1, "qrscan" => $qrscan, "upcscan" => $upcscan, "hh_id" => $hh_part[self::HOUSEHOLD_ID], "survey_id" => $hh_part[self::SURVEY_ID], "kitsub" => $api_result);
                     }else{
                         $success[]  = $mainid;
                     }
                 }else{
-                    $this->emDebug("no upc_var , or qr_var for record $record_id");
+                    $failed[]   = array("row" => $rowidx+1, "qrscan" => $qrscan, "upcscan" => $upcscan, "hh_id" => $hh_part[self::HOUSEHOLD_ID], "survey_id" => $hh_part[self::SURVEY_ID], "kitsub" => $api_result);
+                    $this->emDebug("no upc_var , or qr_var for record $mainid");
                 }
             }
 
@@ -1438,10 +1438,11 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
                 }
             }else{
                 // $this->emDebug("No API results for qrscan for row $rowidx");
-                $failed[]   = $result;
+                $failed[]   = array("row" => $rowidx+1, "qrscan" => $qrscan, "upcscan" => $upcscan, "hh_id" => $hh_part[self::HOUSEHOLD_ID], "survey_id" => $hh_part[self::SURVEY_ID], "kitsub" => $api_result);
             }
         }
 
+        $this->emDebug(array( "total" => count($results), "success" => count($success), "failed" => $failed ));
         $return = array( "total" => count($results), "success" => count($success), "failed" => $failed );
         return $return;
     }

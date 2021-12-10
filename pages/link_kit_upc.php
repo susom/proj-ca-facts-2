@@ -67,7 +67,7 @@ require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
 $em_mode = $module->getProjectSetting("em-mode");
 ?>
 <div style='margin:20px 40px 0 0;'>
-    
+
 
     <?php
         $loading            = $module->getUrl("docs/images/icon_loading.gif");
@@ -164,7 +164,7 @@ $em_mode = $module->getProjectSetting("em-mode");
             color:#000;
             font-weight:bold;
         }
-        
+
         #pending_invites h6.step_used{
             color:#999;
             font-weight:bold;
@@ -178,10 +178,10 @@ $em_mode = $module->getProjectSetting("em-mode");
         #result_msg.good { color:green }
         #result_msg.bad { color:red }
 
-        #result_msg{ 
-            position:relative; 
+        #result_msg{
+            position:relative;
             min-height:20px;
-            padding-left:25px;    
+            padding-left:25px;
         }
         #result_msg::before{
             content:"";
@@ -191,23 +191,40 @@ $em_mode = $module->getProjectSetting("em-mode");
             height:20px;
         }
         #result_msg.loading::before{
-            background:url(<?=$loading?>) 50% no-repeat; 
+            background:url(<?=$loading?>) 50% no-repeat;
             background-size:contain;
         }
         #result_msg.loaded::before{
-            background:url(<?=$loaded?>) 50% no-repeat; 
+            background:url(<?=$loaded?>) 50% no-repeat;
             background-size:contain;
         }
         #result_msg.failed::before{
-            background:url(<?=$failed?>) 50% no-repeat; 
+            background:url(<?=$failed?>) 50% no-repeat;
             background-size:contain;
         }
         #failed_rowids{
-             min-height:150px;
+            margin: 0 0 10px;
+            min-height:150px;
+        }
+        #failed_rowids td {
+            vertical-align: top;
+            text-align:center;
+        }
+        #failed_rowids th{
+            text-align: center;
+            min-width:100px;
+        }
+        #failed_rowids .qrrow{
+            text-align:left;
+        }
+        #failed_rowids .errhdr{
+            text-align:left;
+            padding:5px 10px;
+            color:red;
         }
     </style>
-    
-    
+
+
         <h4>Verify QR CODE (will return data if found in API)</h4>
         <section id="pending_invites">
         <div class='qrscan align-top'>
@@ -216,7 +233,7 @@ $em_mode = $module->getProjectSetting("em-mode");
             <pre id='resultjson'></pre>
         </div>
     </section>
-  
+
     <br><br>
     <hr>
     <br><br>
@@ -235,10 +252,10 @@ $em_mode = $module->getProjectSetting("em-mode");
         </div>
     </section>
     <a href="<?=$link_kit_upc?>" id="upload_btn" type="button" class="btn btn-lg btn-primary">Upload and Process File</a>
-    
+
     <script>
         $(document).ready(function(){
-            // UI UX 
+            // UI UX
 
             // TAKING SCAN INPUT AND GETTING houshold id
             $("input[name='kit_qr_code']").on("focus", function(){
@@ -246,7 +263,7 @@ $em_mode = $module->getProjectSetting("em-mode");
                 $(this).css("color","initial");
                 $("#resultjson").hide();
             });
-            
+
             $("input[name='kit_qr_code']").on("blur", function(){
                 var _el = $(this);
 
@@ -286,7 +303,7 @@ $em_mode = $module->getProjectSetting("em-mode");
                     var kit_records     = _el.attr("data-kitrecords");
                     var main_id         = _el.attr("data-mainrecordid");
                     var qrscan          = $("#test_kit_qr").val();
-                    
+
                     $.ajax({
                         method: 'POST',
                         data: {
@@ -312,7 +329,7 @@ $em_mode = $module->getProjectSetting("em-mode");
                                 location.reload();
                             },250);
                         },750);
-                        
+
 
                     }).fail(function () {
                         console.log("something failed");
@@ -364,11 +381,44 @@ $em_mode = $module->getProjectSetting("em-mode");
                         $("#result_msg").removeClass("loading");
                         if(success_records){
                             $("#result_msg").addClass("loaded").html( success_records + " of <b>" + total_rows + "</b> records updated");
-
-                            var failed = $("<textarea>").attr("id","failed_rowids").val("QR not found:\r\n" + fail_records.join("\r\n"));
-                            failed.insertAfter($("#result_msg"));
                         }else{
                             $("#result_msg").addClass("failed").html("Error : records not updated");
+                        }
+
+                        if(fail_records){
+                            var failed = $("<table>").attr("id","failed_rowids").attr("border",1);
+                            var hdr     = $("<tr>");
+                            var hdrtxt  = $("<th>").addClass("errhdr").attr("colspan",4).text("Following Records Had Errors");
+                            hdr.append(hdrtxt);
+                            failed.append(hdr);
+
+                            var row = $("<tr>");
+                            var idx = $("<th>").text("CSV ROW #");
+                            var rid = $("<th>").text("Redcap ID");
+                            var qr  = $("<th>").text("QR");
+                            var upc = $("<th>").text("UPC");
+                            row.append(idx);
+                            row.append(rid);
+                            row.append(qr);
+                            row.append(upc);
+                            failed.append(row);
+
+                            for(var i in fail_records){
+                                var fr  = fail_records[i];
+                                var row = $("<tr>");
+                                var idx = $("<td>").text(fr["row"]);
+                                var qr  = $("<td>").addClass("qrrow").text(fr["qrscan"]);
+                                var upc = $("<td>").text(fr["upcscan"]);
+                                var rid = fr["kitsub"] && fr["kitsub"].hasOwnProperty("main_id") ? $("<td>").text(fr["kitsub"]["main_id"]) : $("<td>").text("Not Found");
+
+                                row.append(idx);
+                                row.append(rid);
+                                row.append(qr);
+                                row.append(upc);
+
+                                failed.append(row);
+                            }
+                            failed.insertAfter($("#result_msg"));
                         }
                     });
 
@@ -391,13 +441,13 @@ $em_mode = $module->getProjectSetting("em-mode");
             function uploadDone() { //Function will be called when iframe is loaded
                 var ret = frames['upload_target'].document.getElementsByTagName("body")[0].innerHTML;
                 var data = eval("("+ret+")"); //Parse JSON // Read the below explanations before passing judgment on me
-                
+
                 if(data.success) { //This part happens when the image gets uploaded.
                     document.getElementById("image_details").innerHTML = "<img src='image_uploads/" + data.file_name + "' /><br />Size: " + data.size + " KB";
                 }
                 else if(data.failure) { //Upload failed - show user the reason.
                     alert("Upload Failed: " + data.failure);
-                }	
+                }
             }
         });
     </script>
