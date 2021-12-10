@@ -456,9 +456,9 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
 
                 //this just means no participant survey was filled out, but we still have an HHID! SO we can still update main record linkage
                 // FIND FIRST AVAILABLE EMPTY
-                $hhd    = $main_record["hhd_participant_id"];
-                $dep1   = $main_record["dep_1_participant_id"];
-                $dep2   = $main_record["dep_2_participant_id"];
+                $hhd    = strtoupper($main_record["hhd_participant_id"]);
+                $dep1   = strtoupper($main_record["dep_1_participant_id"]);
+                $dep2   = strtoupper($main_record["dep_2_participant_id"]);
 
                 $is_hh  = false;
                 if( empty($hhd) || (!empty($hhd) && $hhd == $part_id) ){
