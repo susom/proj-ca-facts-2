@@ -8,6 +8,11 @@ $xps_integration_id = $module->getProjectSetting('xpsship-integration-id');;
 if(!empty($_POST["action"])){
     $action = $_POST["action"];
     switch($action){
+        case "getHHID" :
+            $qrscan = $_POST["qrscan"] ?? null;
+            $result = $module->getHouseHoldId($qrscan);
+        break;
+
         case "getHouseHoldId":
             $record_id  = $_POST["record_id"] ?? null;
             $qrscan     = $_POST["qrscan"] ?? null;
@@ -143,6 +148,15 @@ if($em_mode != "kit_order"){
 }else{
 ?>
 <div style='margin:20px 40px 0 0;'>
+    <section id="pending_invites_QRCheck">
+        <div class='qrscan align-top'>
+            <h6 class="next_step">Check Valid QR Code</h6>
+            <input type='text' name='kit_qr_code_check' id="checkQR"/><label for='checkQR'></label> <button class="btn btn-lg btn-primary">search</button>
+            <pre id='QRresultjson'></pre>
+        </div>
+    </section>
+<hr>
+
     <h4>Pending Invitations Report</h4>
     <p>Report of all complete invitation questionaires that require shipping</p>
     <p>Report Logic :
@@ -150,6 +164,8 @@ if($em_mode != "kit_order"){
         <br> <b>testpeople</b> is <em>not empty</em>
         <br> <b>kit_household_code</b> is <em>empty</em>
         <br> <b>xps_booknumber</b> is <em>empty</em></p>
+
+    <h4>Verify QR CODE (will return data if found in API)</h4>
 
     <div><a href="#" id="bulk_return_labels" class="float-right btn btn-primary" style="color:#fff">Print 10 Bulk Return Labels</a></div>
     <br><br>
@@ -229,6 +245,90 @@ if($em_mode != "kit_order"){
         $dumphtml[]     = "</tbody>";
     ?>
     <style>
+        #QRresultjson {
+            display:none;
+        }
+        #pending_invites_QRCheck div{
+            display:inline-block;
+        }
+        #pending_invites_QRCheck input{
+            font-size: 20px;
+            padding:10px;
+            border-radius: 3px;
+            border: 1px solid #ccc;
+            display:inline-block;
+            cursor:pointer;
+            width:230px;
+            color:#999;
+        }
+        #pending_invites_QRCheck .qrscan{
+            position:relative;
+            cursor:pointer;
+        }
+
+        #pending_invites_QRCheck label{
+            display:inline-block;
+            vertical-align:top;
+            width: 58px;
+            height: 50px;
+            background: url(<?php echo $qrscan_src ?>) no-repeat;
+            background-size:cover;
+            z-index: 1;
+            cursor:pointer;
+        }
+
+        #pending_invites_QRCheck .upcscan label{
+            width: 142px;
+            background-position-X:-82px;
+        }
+        #pending_invites_QRCheck .upcscan{
+            margin-left:200px;
+            position:relative;
+        }
+        #pending_invites_QRCheck .upcscan:before{
+            position:absolute;
+            content:"";
+            height:50px; width:140px;
+            top:25px;
+            left:-130px;
+            background:url(<?=$doublearrow_src?>) no-repeat;
+            background-size:contain;
+        }
+        #pending_invites_QRCheck .upcscan.loading:before{
+            position:absolute;
+            content:"";
+            height:50px; width:140px;
+            top:25px;
+            left:-130px;
+            background:url(<?=$loading?>) no-repeat;
+            background-size:contain;
+        }
+        #pending_invites_QRCheck .upcscan.link_loading:after{
+            position:absolute;
+            content:"";
+            height:50px; width:140px;
+            top:25px;
+            left:102%;
+            background:url(<?=$loading?>) no-repeat;
+            background-size:contain;
+        }
+        #pending_invites_QRCheck .upcscan.link_loaded:after{
+            position:absolute;
+            content:"";
+            height:50px; width:140px;
+            top:25px;
+            left:102%;
+            background:url(<?=$loaded?>) no-repeat;
+            background-size:contain;
+        }
+
+
+
+
+
+
+
+
         #bulk_return_labels.loading {
             background-image:url(<?=$loading_gif?>) ;
             background-repeat:no-repeat;
@@ -349,6 +449,44 @@ if($em_mode != "kit_order"){
     </table>
     <script>
         $(document).ready(function(){
+            $("input[name='kit_qr_code_check']").on("focus", function(){
+                $(this).val("");
+                $(this).css("color","initial");
+                $("#resultjson").hide();
+            });
+
+            $("input[name='kit_qr_code_check']").on("blur", function(){
+                var _el = $(this);
+
+                //give it a second for the input to populate.
+                var qrscan = _el.val();
+
+                $.ajax({
+                    method: 'POST',
+                    data: {
+                        "action"    : "getHHID",
+                        "qrscan"    : qrscan
+                    },
+                    dataType: 'json'
+                }).done(function (result) {
+                    var hhid    = result["household_id"];
+                    var partid  = result["survey_id"];
+
+                    // need not found condition?
+                    if(!hhid){
+                        _el.css("color","red");
+                        return;
+                    }
+
+                    _el.css("color","green");
+                    var pretty  = JSON.stringify(result, undefined, 4);
+                    $("#QRresultjson").text(pretty);
+                    $("#QRresultjson").show();
+                }).fail(function () {
+                    _el.css("color","red");
+                });
+            });
+
             // UI UX
             $("input[name='kit_qr_code']").blur(function(){
                 $(this).hide();
@@ -356,6 +494,9 @@ if($em_mode != "kit_order"){
 
             $(".qrscan label").click(function(){
                 var forid = $(this).attr("for");
+                $("#"+forid).val('').text('');
+
+                console.log("make sure to clear out any phantom?", $("#"+forid).val(), $("#"+forid).text());
                 $("#"+forid).show().focus();
             });
 

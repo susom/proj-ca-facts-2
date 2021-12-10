@@ -388,7 +388,7 @@ $em_mode = $module->getProjectSetting("em-mode");
                         if(fail_records){
                             var failed = $("<table>").attr("id","failed_rowids").attr("border",1);
                             var hdr     = $("<tr>");
-                            var hdrtxt  = $("<th>").addClass("errhdr").attr("colspan",4).text("Following Records Had Errors");
+                            var hdrtxt  = $("<th>").addClass("errhdr").attr("colspan",4).text("Following Records Had Errors (ie; unfound main id, unmatched participant id, or invalid QR");
                             hdr.append(hdrtxt);
                             failed.append(hdr);
 
