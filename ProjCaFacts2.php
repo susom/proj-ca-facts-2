@@ -1056,6 +1056,12 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
             $who        = $part["who"];
             if(isset($addy_cash[$record_id])){
                 $temp = array_merge($part, $addy_cash[$record_id]);
+
+                if(empty($result_cash[$record_id][$who]["Test Result"])){
+                    unset($participants[$idx]);
+                    continue;
+                }
+
                 $full = array_merge($temp, $result_cash[$record_id][$who]);
                 unset($full["who"]);
                 $participants[$idx] = $full;
