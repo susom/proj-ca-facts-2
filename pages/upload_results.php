@@ -38,10 +38,12 @@ if(isset($_GET["download_results_shipping"])){
     // write each row at a time to a file
     foreach($pending_results as $part){
         $row_array      = array();
+        $gender = empty($part["Gender"])? null : ($part["Gender"] == 1 ? "Male" : "Female");
+        $age    = $part["Age"] ?? null;
         $row_array[]    = $part["Record ID"];
         $row_array[]    = $part["UPC"];
-        $row_array[]    = $part["Age"];
-        $row_array[]    = $part["Gender"] == 1 ? "Male" : "Female" ;
+        $row_array[]    = $age;
+        $row_array[]    = $gender;
         $row_array[]    = $part["Codename"];
         $row_array[]    = $part["Address 1"];
         $row_array[]    = $part["Address 2"];
@@ -264,13 +266,14 @@ require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
             <tbody>
             <?php
             foreach($pending_results as $part){
-                $gender = $part["Gender"] == 1? "Male" : "Female";
+                $gender = empty($part["Gender"])? null : ($part["Gender"] == 1 ? "Male" : "Female");
+                $age    = $part["Age"] ?? null;
                 $html = "<tr>";
                 $html .= "<td>{$part["Record ID"]}</td>";
                 $html .= "<td>{$part["UPC"]}</td>";
                 $html .= "<td>{$part["Test Result"]}</td>";
                 $html .= "<td>{$part["Result"]}</td>";
-                $html .= "<td>{$part["Age"]}</td>";
+                $html .= "<td>$age</td>";
                 $html .= "<td>$gender</td>";
                 $html .= "<td>{$part["Codename"]}</td>";
                 $html .= "<td>{$part["Address 1"]}</td>";

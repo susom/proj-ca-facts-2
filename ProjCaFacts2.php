@@ -962,7 +962,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
             "return_format" => "json",
             "fields"        => array("record_id","age1","sex1","age","sex","codename","address_1","address_2","city","state","zip","hhd_test_result","dep_1_test_result","dep_2_test_result","hhd_test_result_class","dep_1_test_result_class","dep_2_test_result_class", "hhd_test_upc","dep_1_test_upc", "dep_2_test_upc"),
             "events"        => array("baseline_arm_1","head_of_household_arm_1","dependent_1_arm_1","dependent_2_arm_1"),
-            "filterLogic"   => '(([hhd_result_sent] = "" OR [hhd_result_sent] = "0") AND [hhd_test_result] != "")
+            "filterLogic"   => '(([hhd_result_sent] = "" OR [hhd_result_sent] = "0") )
             OR (([dep_1_result_sent] = "" OR [dep_1_result_sent] = "0") )
             OR (([dep_2_result_sent] = "" OR [dep_2_result_sent] = "0") )'
         );
@@ -972,11 +972,16 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         $addy_cash      = array();
         $result_cash    = array();
         $participants   = array();
+        $p2             = array();
 
         foreach($results as $result){
             $record_id  = $result["record_id"];
             $event      = $result['redcap_event_name'];
             $dep1       = false;
+
+            if(!array_key_exists($record_id, $p2)){
+                $p2[$record_id] = array();
+            }
             switch($event){
                 case "baseline_arm_1":
                     if(!array_key_exists($record_id,$addy_cash) ){
@@ -1040,33 +1045,54 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
             $codename   = $result["codename"];
 
             if($event !== "baseline_arm_1"){
+                if(isset($p2[$record_id][$who])){
+                    $temp = array(
+                        "Age"       => $age,
+                        "Gender"    => $sex,
+                    );
+
+                    $p2[$record_id][$who] = array_merge($p2[$record_id][$who], $temp);
+                }
+            }else{
                 $temp = array(
-                    "who"       => $who,
                     "Record ID" => $record_id,
-                    "Age"       => $age,
-                    "Gender"    => $sex,
                     "Codename"  => $codename,
                 );
-                $participants[] = $temp;
-            }
-        }
-
-        foreach($participants as $idx =>  $part){
-            $record_id  = $part["Record ID"];
-            $who        = $part["who"];
-            if(isset($addy_cash[$record_id])){
-                $temp = array_merge($part, $addy_cash[$record_id]);
-
-                if(empty($result_cash[$record_id][$who]["Test Result"])){
-                    unset($participants[$idx]);
-                    continue;
+                if(!empty($test_result_raw)){
+                    $p2[$record_id]["hhd"] = $temp;
                 }
-
-                $full = array_merge($temp, $result_cash[$record_id][$who]);
-                unset($full["who"]);
-                $participants[$idx] = $full;
+                if(!empty($test_result_raw_d1)){
+                    $p2[$record_id]["dep1"] = $temp;
+                }
+                if(!empty($test_result_raw_d2)){
+                    $p2[$record_id]["dep2"] = $temp;
+                }
             }
         }
+
+        foreach($p2 as $record_id => $p){
+            foreach ($p as $who => $part){
+                if(isset($addy_cash[$record_id])){
+                    $temp = array_merge($part, $addy_cash[$record_id]);
+
+                    if(!isset($result_cash[$record_id][$who])){
+                        unset($p2[$record_id][$who]);
+                        continue;
+                    }
+
+                    $full = array_merge($temp, $result_cash[$record_id][$who]);
+                    unset($full["who"]);
+                    $p2[$record_id][$who] = $full;
+                }
+            }
+        }
+
+        foreach($p2 as $ps){
+            foreach($ps as $p){
+                $participants[] = $p;
+            }
+        }
+
 
 //        $this->emDebug($participants);
         return $participants;
