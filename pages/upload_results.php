@@ -2,12 +2,6 @@
 namespace Stanford\ProjCaFacts2;
 /** @var \Stanford\ProjCaFacts2\ProjCaFacts2 $module */
 
-
-
-
-
-
-
 if(!empty($_POST["action"])){
     $action = $_POST["action"];
     switch($action){
@@ -30,11 +24,45 @@ if(!empty($_POST["action"])){
     exit;
 }
 
-require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
+$pending_results = $module->getPendingResultsShipping();
 
-$em_mode = $module->getProjectSetting("em-mode");
-if($em_mode = "kit_submission"){
-    $CSV_EXAMPLE = $module->getUrl("docs/CAFACTSKITSUBMISSION_ImportTemplate_2020-08-29.csv");
+$actual_link        = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+if(isset($_GET["download_results_shipping"])){
+    $headers        = array("Record ID","UPC" , "Age", "Gender", "Codename" , "Address 1", "Address 2", "City", "State", "Zip",  "Test Result", "Result" );
+    $output_dest    = 'php://output';
+    $output         = fopen($output_dest, 'w') or die('Can\'t create .csv file, try again later.');
+
+    //Add the headers
+    fputcsv($output, $headers);
+
+    // write each row at a time to a file
+    foreach($pending_results as $part){
+        $row_array      = array();
+        $row_array[]    = $part["Record ID"];
+        $row_array[]    = $part["UPC"];
+        $row_array[]    = $part["Age"];
+        $row_array[]    = $part["Gender"] == 1 ? "Male" : "Female" ;
+        $row_array[]    = $part["Codename"];
+        $row_array[]    = $part["Address 1"];
+        $row_array[]    = $part["Address 2"];
+        $row_array[]    = $part["City"];
+        $row_array[]    = $part["State"];
+        $row_array[]    = $part["Zip"];
+        $row_array[]    = $part["Test Result"];
+        $row_array[]    = $part["Result"];
+
+        fputcsv($output, $row_array);
+    }
+
+    // output headers so that the file is downloaded rather than displayed
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename=participant_test_results_for_mailing.csv');
+
+    fclose($output);
+    exit;
+}
+
+require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
 ?>
 <div style='margin:20px 40px 0 0;'>
     <h4>TEST RESULTS - BULK UPLOAD</h4>
@@ -50,6 +78,7 @@ if($em_mode = "kit_submission"){
         $qrscan_src         = $module->getUrl("docs/images/fpo_qr_bar.png");
         $doublearrow_src    = $module->getUrl("docs/images/icon_doublearrow.png");
         $link_kit_upc       = $module->getUrl("pages/link_kit_upc.php");
+        $upload_results     = $module->getUrl("pages/upload_results.php");
     ?>
 
     <style>
@@ -125,7 +154,7 @@ if($em_mode = "kit_submission"){
             color:#000;
             font-weight:bold;
         }
-        
+
         #pending_invites h6.step_used{
             color:#999;
             font-weight:bold;
@@ -139,10 +168,10 @@ if($em_mode = "kit_submission"){
         #result_msg.good { color:green }
         #result_msg.bad { color:red }
 
-        #result_msg{ 
-            position:relative; 
+        #result_msg{
+            position:relative;
             min-height:20px;
-            padding-left:25px;    
+            padding-left:25px;
         }
         #result_msg::before{
             content:"";
@@ -152,22 +181,22 @@ if($em_mode = "kit_submission"){
             height:20px;
         }
         #result_msg.loading::before{
-            background:url(<?=$loading?>) 50% no-repeat; 
+            background:url(<?=$loading?>) 50% no-repeat;
             background-size:contain;
         }
         #result_msg.loaded::before{
-            background:url(<?=$loaded?>) 50% no-repeat; 
+            background:url(<?=$loaded?>) 50% no-repeat;
             background-size:contain;
         }
         #result_msg.failed::before{
-            background:url(<?=$failed?>) 50% no-repeat; 
+            background:url(<?=$failed?>) 50% no-repeat;
             background-size:contain;
         }
         #failed_rowids{
              min-height:150px;
         }
     </style>
-    
+
     <section id="pending_invites">
 
         <div class='qrscan'>
@@ -183,10 +212,87 @@ if($em_mode = "kit_submission"){
     <a href="<?=$link_kit_upc?>" id="upload_btn" type="button" class="btn btn-lg btn-primary">Upload and Process File</a>
 
 
+    <hr>
 
-    
+    <section>
+        <h4>Participant with Results (pending shipping) Report <span class="float-right"><a id="download_results_for_sending" class="btn btn-success btn-small" href="<?=$upload_results?>&download_results_shipping=1">Download CSV</a></span></h4>
+
+        <style>
+            #statuses th {
+                padding:5px 8px;
+                text-align:center;
+            }
+            #statuses td {
+                text-align:center;
+                background:#CCC;
+            }
+            #statuses tbody tr td.N {
+                background:indianred !important;
+                color:#fff;
+                font-weight:bold;
+            }
+            #statuses tbody tr td.Y{
+                background:mediumseagreen !important;
+                color:#fff;
+                font-weight:bold;
+            }
+            #statuses .participant{
+                background:#fff;
+                padding:8px;
+                text-align:left;
+            }
+            #statuses tbody tr:nth-child(even) td {background: #FFF}
+            #statuses tbody tr:nth-child(odd) td {background: #EFEFEF}
+        </style>
+        <table id="statuses" width="100%" border="1" data-page-length='25'>
+            <thead>
+            <tr>
+                <th>Record ID</th>
+                <th>UPC</th>
+                <th>Test Result</th>
+                <th>Result</th>
+                <th>Age</th>
+                <th>Gender</th>
+                <th>Codename</th>
+                <th>Address 1</th>
+                <th>Address 2</th>
+                <th>City</th>
+                <th>State</th>
+                <th>Zip</th>
+            </tr>
+            </thead>
+            <tbody>
+            <?php
+            foreach($pending_results as $part){
+                $gender = $part["Gender"] == 1? "Male" : "Female";
+                $html = "<tr>";
+                $html .= "<td>{$part["Record ID"]}</td>";
+                $html .= "<td>{$part["UPC"]}</td>";
+                $html .= "<td>{$part["Test Result"]}</td>";
+                $html .= "<td>{$part["Result"]}</td>";
+                $html .= "<td>{$part["Age"]}</td>";
+                $html .= "<td>$gender</td>";
+                $html .= "<td>{$part["Codename"]}</td>";
+                $html .= "<td>{$part["Address 1"]}</td>";
+                $html .= "<td>{$part["Address 2"]}</td>";
+                $html .= "<td>{$part["City"]}</td>";
+                $html .= "<td>{$part["State"]}</td>";
+                $html .= "<td>{$part["Zip"]}</td>";
+                $html .= "</tr>";
+                echo $html;
+            }
+            ?>
+            </tbody>
+        </table>
+    </section>
+
+
+    <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.21/css/jquery.dataTables.min.css"/>
+    <script type="text/javascript" src="//cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
     <script>
         $(document).ready(function(){
+            $('#statuses').DataTable();
+
             $("#upload_btn").click(function(){
                 var file =  $("#upload_csv").prop('files')[0];
 
@@ -235,7 +341,7 @@ if($em_mode = "kit_submission"){
 
                 $("#result_msg").removeClass("loaded").removeClass("failed").removeClass("loading").addClass("loading").text("Processing data ...");
                 $("#failed_rowids").remove();
-                
+
                 el.parent().attr("target","iframeTarget");
                 el.parent().append($("<input type='hidden'>").attr("name","action").val("saveField"));
                 el.parent().append($("<input type='hidden'>").attr("name","field_type").val(field_type));
@@ -245,4 +351,4 @@ if($em_mode = "kit_submission"){
         });
     </script>
 </div>
-<?php } ?>
+

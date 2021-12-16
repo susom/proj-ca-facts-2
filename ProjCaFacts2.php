@@ -954,6 +954,118 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         return array("survey_id" => $j['survey_id'] , "household_id" => $j['household_id']);
     }
 
+    public function getPendingResultsShipping(){
+        $results = array();
+
+        $params = array(
+            "project_id"    => $this->main_project,
+            "return_format" => "json",
+            "fields"        => array("record_id","age1","sex1","age","sex","codename","address_1","address_2","city","state","zip","hhd_test_result","dep_1_test_result","dep_2_test_result","hhd_test_result_class","dep_1_test_result_class","dep_2_test_result_class", "hhd_test_upc","dep_1_test_upc", "dep_2_test_upc"),
+            "events"        => array("baseline_arm_1","head_of_household_arm_1","dependent_1_arm_1","dependent_2_arm_1"),
+            "filterLogic"   => '(([hhd_result_sent] = "" OR [hhd_result_sent] = "0") AND [hhd_test_result] != "")
+            OR (([dep_1_result_sent] = "" OR [dep_1_result_sent] = "0") )
+            OR (([dep_2_result_sent] = "" OR [dep_2_result_sent] = "0") )'
+        );
+        $res        = \REDCap::getData($params);
+        $results    = json_decode($res,1);
+
+        $addy_cash      = array();
+        $result_cash    = array();
+        $participants   = array();
+
+        foreach($results as $result){
+            $record_id  = $result["record_id"];
+            $event      = $result['redcap_event_name'];
+            $dep1       = false;
+            switch($event){
+                case "baseline_arm_1":
+                    if(!array_key_exists($record_id,$addy_cash) ){
+                        $addy_cash[$record_id]      = array();
+                        $result_cash[$record_id]    = array();
+                    }
+
+                    $test_upc               = $result["hhd_test_upc"];
+                    $test_result_raw        = $result["hhd_test_result"];
+                    $test_result_cls        = $result["hhd_test_result_class"];
+
+                    $test_upc_d1            = $result["dep_1_test_upc"];
+                    $test_result_raw_d1     = $result["dep_1_test_result"];
+                    $test_result_cls_d1     = $result["dep_1_test_result_class"];
+
+                    $test_upc_d2            = $result["dep_2_test_upc"];
+                    $test_result_raw_d2     = $result["dep_2_test_result"];
+                    $test_result_cls_d2     = $result["dep_2_test_result_class"];
+
+                    $result_cash[$record_id]["hhd"]     = array(
+                        "UPC" => $test_upc,
+                        "Test Result" => $test_result_raw,
+                        "Result" => $test_result_cls
+                    );
+                    $result_cash[$record_id]["dep1"]    = array(
+                        "UPC" => $test_upc_d1,
+                        "Test Result" => $test_result_raw_d1,
+                        "Result" => $test_result_cls_d1
+                    );
+                    $result_cash[$record_id]["dep2"]    = array(
+                        "UPC" => $test_upc_d2,
+                        "Test Result" => $test_result_raw_d2,
+                        "Result" => $test_result_cls_d2
+                    );
+
+                    $temp = array(
+                        "Address 1"  => $result["address_1"],
+                        "Address 2"  => $result["address_2"],
+                        "City"       => $result["city"],
+                        "State"      => $result["state"],
+                        "Zip"        => $result["zip"]
+                    );
+                    $addy_cash[$record_id] = $temp;
+                break;
+
+                case "head_of_household_arm_1":
+                    $age                = $result["age1"];
+                    $sex                = $result["sex1"];
+                    $who                = "hhd";
+                break;
+
+                case "dependent_1_arm_1":
+                    $dep1 = true;
+                case "dependent_2_arm_1":
+                    $age = $result["age"];
+                    $sex = $result["sex"];
+                    $who = $dep1 ? "dep1" : "dep2";
+                break;
+            }
+
+            $codename   = $result["codename"];
+
+            if($event !== "baseline_arm_1"){
+                $temp = array(
+                    "who"       => $who,
+                    "Record ID" => $record_id,
+                    "Age"       => $age,
+                    "Gender"    => $sex,
+                    "Codename"  => $codename,
+                );
+                $participants[] = $temp;
+            }
+        }
+
+        foreach($participants as $idx =>  $part){
+            $record_id  = $part["Record ID"];
+            $who        = $part["who"];
+            if(isset($addy_cash[$record_id])){
+                $temp = array_merge($part, $addy_cash[$record_id]);
+                $full = array_merge($temp, $result_cash[$record_id][$who]);
+                unset($full["who"]);
+                $participants[$idx] = $full;
+            }
+        }
+
+//        $this->emDebug($participants);
+        return $participants;
+    }
+
      /**
      * GET DATA FROM PROJECT DATA TIED TO THIS EM
      * @return bool
