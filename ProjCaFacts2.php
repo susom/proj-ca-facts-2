@@ -954,6 +954,145 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         return array("survey_id" => $j['survey_id'] , "household_id" => $j['household_id']);
     }
 
+    public function getAllRecordsWithResults(){
+        $results = array();
+
+        $params = array(
+            "project_id"    => $this->main_project,
+            "return_format" => "json",
+            "fields"        => array("record_id","hhd_participant_id", "dep_1_participant_id", "dep_2_participant_id", "age1","sex1","age","sex","codename", "zip","hhd_test_result","dep_1_test_result","dep_2_test_result", "hhd_test_upc","dep_1_test_upc", "dep_2_test_upc"),
+            "events"        => array("baseline_arm_1","head_of_household_arm_1","dependent_1_arm_1","dependent_2_arm_1"),
+            "filterLogic"   => ''
+        );
+        $res        = \REDCap::getData($params);
+        $results    = json_decode($res,1);
+
+        $addy_cash      = array();
+        $result_cash    = array();
+        $participants   = array();
+        $p2             = array();
+
+        foreach($results as $result){
+            $record_id  = $result["record_id"];
+            $event      = $result['redcap_event_name'];
+            $dep1       = false;
+
+            if(!array_key_exists($record_id, $p2)){
+                $p2[$record_id] = array();
+            }
+            switch($event){
+                case "baseline_arm_1":
+                    if(!array_key_exists($record_id,$addy_cash) ){
+                        $addy_cash[$record_id]      = array();
+                        $result_cash[$record_id]    = array();
+                    }
+
+                    $test_upc               = $result["hhd_test_upc"];
+                    $test_result_raw        = $result["hhd_test_result"];
+                    $part_id                = $result["hhd_participant_id"];
+
+                    $test_upc_d1            = $result["dep_1_test_upc"];
+                    $test_result_raw_d1     = $result["dep_1_test_result"];
+                    $part_id_d1             = $result["dep_1_participant_id"];
+
+                    $test_upc_d2            = $result["dep_2_test_upc"];
+                    $test_result_raw_d2     = $result["dep_2_test_result"];
+                    $part_id_d2             = $result["dep_2_participant_id"];
+
+                    $result_cash[$record_id]["hhd"]     = array(
+                        "Participant ID" => $part_id,
+                        "UPC" => $test_upc,
+                        "Test Result" => $test_result_raw,
+                    );
+                    $result_cash[$record_id]["dep1"]    = array(
+                        "Participant ID" => $part_id_d1,
+                        "UPC" => $test_upc_d1,
+                        "Test Result" => $test_result_raw_d1,
+                    );
+                    $result_cash[$record_id]["dep2"]    = array(
+                        "Participant ID" => $part_id_d2,
+                        "UPC" => $test_upc_d2,
+                        "Test Result" => $test_result_raw_d2,
+                    );
+
+                    $temp = array(
+                        "Zip"        => $result["zip"]
+                    );
+                    $addy_cash[$record_id] = $temp;
+                break;
+
+                case "head_of_household_arm_1":
+                    $age                = $result["age1"];
+                    $sex                = $result["sex1"];
+                    $who                = "hhd";
+                break;
+
+                case "dependent_1_arm_1":
+                    $dep1 = true;
+                case "dependent_2_arm_1":
+                    $age = $result["age"];
+                    $sex = $result["sex"];
+                    $who = $dep1 ? "dep1" : "dep2";
+                break;
+            }
+
+            $codename   = $result["codename"];
+
+            if($event !== "baseline_arm_1"){
+                if(isset($p2[$record_id][$who])){
+                    $temp = array(
+                        "Age"       => $age,
+                        "Gender"    => $sex,
+                        "Codename"  => $codename
+                    );
+
+                    $p2[$record_id][$who] = array_merge($p2[$record_id][$who], $temp);
+                }
+            }else{
+                $temp = array(
+                    "Record ID" => $record_id,
+                );
+
+                if(!empty($test_result_raw)){
+                    $p2[$record_id]["hhd"] = $temp;
+                }
+                if(!empty($test_result_raw_d1)){
+                    $p2[$record_id]["dep1"] = $temp;
+                }
+                if(!empty($test_result_raw_d2)){
+                    $p2[$record_id]["dep2"] = $temp;
+                }
+            }
+        }
+
+        foreach($p2 as $record_id => $p){
+            foreach ($p as $who => $part){
+                if(isset($addy_cash[$record_id])){
+                    $temp = array_merge($part, $addy_cash[$record_id]);
+
+                    if(!isset($result_cash[$record_id][$who])){
+                        unset($p2[$record_id][$who]);
+                        continue;
+                    }
+
+                    $full = array_merge($temp, $result_cash[$record_id][$who]);
+                    unset($full["who"]);
+                    $p2[$record_id][$who] = $full;
+                }
+            }
+        }
+
+        foreach($p2 as $ps){
+            foreach($ps as $p){
+                $participants[] = $p;
+            }
+        }
+
+
+//        $this->emDebug($participants);
+        return $participants;
+    }
+
     public function getPendingResultsShipping(){
         $results = array();
 

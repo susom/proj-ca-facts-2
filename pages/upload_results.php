@@ -24,11 +24,16 @@ if(!empty($_POST["action"])){
     exit;
 }
 
-$pending_results = $module->getPendingResultsShipping();
+$pending_results    = $module->getPendingResultsShipping();
+$all_results        = $module->getAllRecordsWithResults();
 
 $actual_link        = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
-if(isset($_GET["download_results_shipping"])){
+if(isset($_GET["download_results_shipping"]) OR isset($_GET["download_all_results"]) ){
+    $get_all        = isset($_GET["download_all_results"]);
     $headers        = array("Record ID","UPC" , "Age", "Gender", "Codename" , "Address 1", "Address 2", "City", "State", "Zip",  "Test Result", "Result" );
+    if($get_all){
+        $headers        = array("Record ID","Participant ID", "UPC" , "Age", "Gender", "Codename" ,  "Zip",  "Test Result" );
+    }
     $output_dest    = 'php://output';
     $output         = fopen($output_dest, 'w') or die('Can\'t create .csv file, try again later.');
 
@@ -40,25 +45,32 @@ if(isset($_GET["download_results_shipping"])){
         $row_array      = array();
         $gender = empty($part["Gender"])? null : ($part["Gender"] == 1 ? "Male" : "Female");
         $age    = $part["Age"] ?? null;
+
         $row_array[]    = $part["Record ID"];
+        if($get_all){
+            $row_array[]    = $part["Participant ID"];
+        }
         $row_array[]    = $part["UPC"];
         $row_array[]    = $age;
         $row_array[]    = $gender;
         $row_array[]    = $part["Codename"];
-        $row_array[]    = $part["Address 1"];
-        $row_array[]    = $part["Address 2"];
-        $row_array[]    = $part["City"];
-        $row_array[]    = $part["State"];
+        if(!$get_all) {
+            $row_array[] = $part["Address 1"];
+            $row_array[] = $part["Address 2"];
+            $row_array[] = $part["City"];
+            $row_array[] = $part["State"];
+        }
         $row_array[]    = $part["Zip"];
         $row_array[]    = $part["Test Result"];
-        $row_array[]    = $part["Result"];
 
         fputcsv($output, $row_array);
     }
 
+    $file_name = $get_all ? "all_participants_with_results.csv" : "participant_test_results_for_mailing.csv";
+
     // output headers so that the file is downloaded rather than displayed
     header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename=participant_test_results_for_mailing.csv');
+    header('Content-Disposition: attachment; filename=' .$file_name);
 
     fclose($output);
     exit;
@@ -215,38 +227,37 @@ require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
 
 
     <hr>
+    <style>
+        .statuses th {
+            padding:5px 8px;
+            text-align:center;
+        }
+        .statuses td {
+            text-align:center;
+            background:#CCC;
+        }
+        .statuses tbody tr td.N {
+            background:indianred !important;
+            color:#fff;
+            font-weight:bold;
+        }
+        .statuses tbody tr td.Y{
+            background:mediumseagreen !important;
+            color:#fff;
+            font-weight:bold;
+        }
+        .statuses .participant{
+            background:#fff;
+            padding:8px;
+            text-align:left;
+        }
+        .statuses tbody tr:nth-child(even) td {background: #FFF}
+        .statuses tbody tr:nth-child(odd) td {background: #EFEFEF}
+    </style>
 
     <section>
         <h4>Participant with Results (pending shipping) Report <span class="float-right"><a id="download_results_for_sending" class="btn btn-success btn-small" href="<?=$upload_results?>&download_results_shipping=1">Download CSV</a></span></h4>
-
-        <style>
-            #statuses th {
-                padding:5px 8px;
-                text-align:center;
-            }
-            #statuses td {
-                text-align:center;
-                background:#CCC;
-            }
-            #statuses tbody tr td.N {
-                background:indianred !important;
-                color:#fff;
-                font-weight:bold;
-            }
-            #statuses tbody tr td.Y{
-                background:mediumseagreen !important;
-                color:#fff;
-                font-weight:bold;
-            }
-            #statuses .participant{
-                background:#fff;
-                padding:8px;
-                text-align:left;
-            }
-            #statuses tbody tr:nth-child(even) td {background: #FFF}
-            #statuses tbody tr:nth-child(odd) td {background: #EFEFEF}
-        </style>
-        <table id="statuses" width="100%" border="1" data-page-length='25'>
+        <table id="statuses" class="statuses" width="100%" border="1" data-page-length='25'>
             <thead>
             <tr>
                 <th>Record ID</th>
@@ -289,12 +300,51 @@ require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
         </table>
     </section>
 
+    <hr>
+
+    <section>
+        <h4>All Participants with Results  <span class="float-right"><a id="download_all_results" class="btn btn-success btn-small" href="<?=$upload_results?>&download_all_results=1">Download CSV</a></span></h4>
+        <table id="statuses_all" class="statuses" width="100%" border="1" data-page-length='25'>
+            <thead>
+            <tr>
+                <th>Record ID</th>
+                <th>Participant ID</th>
+                <th>UPC</th>
+                <th>Test Result</th>
+                <th>Age</th>
+                <th>Gender</th>
+                <th>Codename</th>
+                <th>Zip</th>
+            </tr>
+            </thead>
+            <tbody>
+            <?php
+            foreach($pending_results as $part){
+                $gender = empty($part["Gender"])? null : ($part["Gender"] == 1 ? "Male" : "Female");
+                $age    = $part["Age"] ?? null;
+                $html = "<tr>";
+                $html .= "<td>{$part["Record ID"]}</td>";
+                $html .= "<td>{$part["Participant ID"]}</td>";
+                $html .= "<td>{$part["UPC"]}</td>";
+                $html .= "<td>{$part["Test Result"]}</td>";
+                $html .= "<td>$age</td>";
+                $html .= "<td>$gender</td>";
+                $html .= "<td>{$part["Codename"]}</td>";
+                $html .= "<td>{$part["Zip"]}</td>";
+                $html .= "</tr>";
+                echo $html;
+            }
+            ?>
+            </tbody>
+        </table>
+    </section>
 
     <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.21/css/jquery.dataTables.min.css"/>
     <script type="text/javascript" src="//cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
     <script>
         $(document).ready(function(){
             $('#statuses').DataTable();
+            $('#statuses_all').DataTable();
 
             $("#upload_btn").click(function(){
                 var file =  $("#upload_csv").prop('files')[0];
