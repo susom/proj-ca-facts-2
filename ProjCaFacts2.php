@@ -1049,6 +1049,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
                     $temp = array(
                         "Age"       => $age,
                         "Gender"    => $sex,
+                        "Codename"  => $codename
                     );
 
                     $p2[$record_id][$who] = array_merge($p2[$record_id][$who], $temp);
@@ -1056,8 +1057,8 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
             }else{
                 $temp = array(
                     "Record ID" => $record_id,
-                    "Codename"  => $codename,
                 );
+
                 if(!empty($test_result_raw)){
                     $p2[$record_id]["hhd"] = $temp;
                 }
