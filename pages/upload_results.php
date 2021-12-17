@@ -319,7 +319,7 @@ require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
             </thead>
             <tbody>
             <?php
-            foreach($pending_results as $part){
+            foreach($all_results as $part){
                 $gender = empty($part["Gender"])? null : ($part["Gender"] == 1 ? "Male" : "Female");
                 $age    = $part["Age"] ?? null;
                 $html = "<tr>";
