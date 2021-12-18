@@ -40,29 +40,43 @@ if(isset($_GET["download_results_shipping"]) OR isset($_GET["download_all_result
     fputcsv($output, $headers);
 
     // write each row at a time to a file
-    foreach($pending_results as $part){
-        $row_array      = array();
-        $gender = empty($part["Gender"])? null : ($part["Gender"] == 1 ? "Male" : "Female");
-        $age    = $part["Age"] ?? null;
+    if($get_all){
+        foreach($all_results as $part){
+            $row_array      = array();
+            $gender = empty($part["Gender"])? null : ($part["Gender"] == 1 ? "Male" : "Female");
+            $age    = $part["Age"] ?? null;
 
-        $row_array[]    = $part["Record ID"];
-        if($get_all){
+            $row_array[]    = $part["Record ID"];
             $row_array[]    = $part["Participant ID"];
-        }
-        $row_array[]    = $part["UPC"];
-        $row_array[]    = $age;
-        $row_array[]    = $gender;
-        $row_array[]    = $part["Codename"];
-        if(!$get_all) {
-            $row_array[] = $part["Address 1"];
-            $row_array[] = $part["Address 2"];
-            $row_array[] = $part["City"];
-            $row_array[] = $part["State"];
-        }
-        $row_array[]    = $part["Zip"];
-        $row_array[]    = $part["Test Result"];
+            $row_array[]    = $part["UPC"];
+            $row_array[]    = $age;
+            $row_array[]    = $gender;
+            $row_array[]    = $part["Codename"];
+            $row_array[]    = $part["Zip"];
+            $row_array[]    = $part["Test Result"];
 
-        fputcsv($output, $row_array);
+            fputcsv($output, $row_array);
+        }
+    }else{
+        foreach($pending_results as $part){
+            $row_array      = array();
+            $gender = empty($part["Gender"])? null : ($part["Gender"] == 1 ? "Male" : "Female");
+            $age    = $part["Age"] ?? null;
+
+            $row_array[]    = $part["Record ID"];
+            $row_array[]    = $part["UPC"];
+            $row_array[]    = $age;
+            $row_array[]    = $gender;
+            $row_array[]    = $part["Codename"];
+            $row_array[]    = $part["Address 1"];
+            $row_array[]    = $part["Address 2"];
+            $row_array[]    = $part["City"];
+            $row_array[]    = $part["State"];
+            $row_array[]    = $part["Zip"];
+            $row_array[]    = $part["Test Result"];
+
+            fputcsv($output, $row_array);
+        }
     }
 
     $file_name = $get_all ? "all_participants_with_results.csv" : "participant_test_results_for_mailing.csv";
