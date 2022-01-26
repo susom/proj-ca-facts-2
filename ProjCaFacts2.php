@@ -1124,7 +1124,7 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         $params = array(
             "project_id"    => $this->main_project,
             "return_format" => "json",
-            "fields"        => array("record_id","age1","sex1","age","sex","codename","address_1","address_2","city","state","zip","hhd_test_result","dep_1_test_result","dep_2_test_result","hhd_test_result_class","dep_1_test_result_class","dep_2_test_result_class", "hhd_test_upc","dep_1_test_upc", "dep_2_test_upc"),
+            "fields"        => array("record_id","age1","sex1","age","sex","codename","address_1","address_2","city","state","zip","hhd_result_sent","dep_1_result_sent","dep_2_result_sent", "hhd_test_result","dep_1_test_result","dep_2_test_result","hhd_test_result_class","dep_1_test_result_class","dep_2_test_result_class", "hhd_test_upc","dep_1_test_upc", "dep_2_test_upc"),
             "events"        => array("baseline_arm_1","head_of_household_arm_1","dependent_1_arm_1","dependent_2_arm_1"),
             "filterLogic"   => '(([hhd_result_sent] = "" OR [hhd_result_sent] = "0") )
             OR (([dep_1_result_sent] = "" OR [dep_1_result_sent] = "0") )
@@ -1168,18 +1168,21 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
                     $result_cash[$record_id]["hhd"]     = array(
                         "UPC" => $test_upc,
                         "part_var" => "HHD",
+                        "result_sent" => $result["hhd_result_sent"],
                         "Test Result" => $test_result_raw,
                         "Result" => $test_result_cls
                     );
                     $result_cash[$record_id]["dep1"]    = array(
                         "UPC" => $test_upc_d1,
                         "part_var" => "DEP_1",
+                        "result_sent" => $result["dep_1_result_sent"],
                         "Test Result" => $test_result_raw_d1,
                         "Result" => $test_result_cls_d1
                     );
                     $result_cash[$record_id]["dep2"]    = array(
                         "UPC" => $test_upc_d2,
                         "part_var" => "DEP_2",
+                        "result_sent" => $result["dep_2_result_sent"],
                         "Test Result" => $test_result_raw_d2,
                         "Result" => $test_result_cls_d2
                     );

@@ -27,6 +27,7 @@ if(!empty($_POST["action"])){
 $pending_results    = $module->getPendingResultsShipping();
 $all_results        = $module->getAllRecordsWithResults();
 
+
 if(isset($_GET["download_results_shipping"]) OR isset($_GET["download_all_results"]) ){
     $get_all        = isset($_GET["download_all_results"]);
     $headers        = array("Record ID","Part_Var" ,"UPC" ,  "Age", "Gender", "Codename" , "Address 1", "Address 2", "City", "State", "Zip",  "Test Result", "Result" );
@@ -60,6 +61,9 @@ if(isset($_GET["download_results_shipping"]) OR isset($_GET["download_all_result
         }
     }else{
         foreach($pending_results as $part){
+            if(!empty($part["result_sent"])){
+                continue;
+            }
             $row_array      = array();
             $gender = empty($part["Gender"])? null : ($part["Gender"] == 1 ? "Male" : "Female");
             $age    = $part["Age"] ?? null;
@@ -293,6 +297,9 @@ require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
             <tbody>
             <?php
             foreach($pending_results as $part){
+                if(!empty($part["result_sent"])){
+                    continue;
+                }
                 $gender = empty($part["Gender"])? null : ($part["Gender"] == 1 ? "Male" : "Female");
                 $age    = $part["Age"] ?? null;
                 $html = "<tr>";
