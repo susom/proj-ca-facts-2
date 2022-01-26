@@ -364,6 +364,26 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         return false;
     }
 
+    public function scratch(){
+        $this->getAllSupportProjects();
+
+        $results    = array();
+
+        $params     = array(
+            "project_id"        => $this->main_project,
+            "return_format"     => "json",
+            "fields"            => array("record_id", "kit_qr_code", "hhd_participant_id", "dep_1_participant_id", "dep_2_participant_id", "hhd_test_qr", "dep_1_test_qr", "dep_2_test_qr", "hhd_test_upc", "dep_1_test_upc", "dep_2_test_upc", "hhd_test_result", "dep_1_test_result", "dep_2_test_result"),
+            "events"            => "baseline_arm_1",
+            "filterLogic"       => "([testpeople] <> 1) and ([kit_qr_code] = [hhd_test_qr]) and ([hhd_test_upc] <> '' or [dep_1_test_upc] <> '' or [dep_2_test_upc] <> '') and ([head_of_household_arm_1][language_hh] <> '' or [dependent_1_arm_1][language_bc] <> '' or [dependent_2_arm_1][language_bc] <> '')"
+
+//            "filterLogic"   => "([testpeople] <> 1)  and ([head_of_household_arm_1][language_hh] <> '' or [dependent_1_arm_1][language_bc] <> '' or [dependent_2_arm_1][language_bc] <> '')"
+        );
+        $results    = \REDCap::getData($params);
+        $results    = json_decode($results,1);
+
+        return $results;
+    }
+
     /**
      * Processes the KIT submission from GAUSS
      * @return bool survey url link
@@ -385,6 +405,8 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         $event_id           = \REDCap::getEventIdFromUniqueEvent($bc_event_arm);
 
         $instrument         = $is_hh ? 'language_select_hh' : 'language_select_bc'; //english_adultchild_survey
+
+        $this->emDebug("kit submit record_id", $kit_submit_record_id, $instrument, $event_id);
 
         //GET PUBLIC SURVEY URL FOR THAT RECORD TO SEND BACK TO GAUSS TO DISPLAY TO THE USER
         $survey_link        = \REDCap::getSurveyLink($record_id, $instrument, $event_id, $instance=1, $project_id=$this->main_project);
@@ -425,8 +447,8 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
      */
     public function getKitSubmissionId($household_id, $participant_id) {
         if(!empty($household_id)){
-            $part_id    = $participant_id;
-            $hh_id      = $household_id;
+            $part_id    = strtoupper($participant_id);
+            $hh_id      = strtoupper($household_id);
 
             // GET MAIN PROJECT RECORD ID
             // EVERY OUT GOING KIT MUST HAVE HAD an hh_id LINKED TO a single record.
@@ -1608,19 +1630,22 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         $results_sent_date  = Date("Y-m-d");
         $data               = array();
         $this->emDebug("results sent date", $results_sent_date);
+
+        $unique_ids = array();
         foreach($results as $rowidx => $result){
             $which_var          = null;
             $main_record_id     = $result[0];
 
-            if( in_array("Head of Household Test UPC", $headers) ){
+            if( in_array("hhd_test_upc", $headers) ){
                 $which_var = "hhd_result_sent";
-            }else if( in_array("Dependent 1 Test UPC", $headers) ){
+            }else if( in_array("dep_1_test_upc", $headers) ){
                 $which_var = "dep_1_result_sent";
-            }else if( in_array("Dependent 2 Test UPC", $headers) ){
+            }else if( in_array("dep_2_test_upc", $headers) ){
                 $which_var = "dep_2_result_sent";
             }
 
-            if($which_var){
+            if($which_var && !in_array($main_record_id, $unique_ids)){
+                array_push($unique_ids, $main_record_id);
                 $temp = array(
                     "record_id"         => $main_record_id,
                     $which_var          => 1
@@ -1631,7 +1656,10 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
                 $this->emDebug("wtf couldnt find headers label?", $headers);
             }
         }
+
+        $this->emDebug($data);
         $r  = \REDCap::saveData($this->main_project, 'json', json_encode($data) );
+
         if(empty($r["errors"])){
             $success = $r["item_count"];
             $this->emDebug("All Records Saved", $r);
