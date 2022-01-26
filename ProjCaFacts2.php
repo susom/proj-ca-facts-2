@@ -1024,16 +1024,19 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
                     $result_cash[$record_id]["hhd"]     = array(
                         "Participant ID" => $part_id,
                         "UPC" => $test_upc,
+                        "part_var" => "HHD",
                         "Test Result" => $test_result_raw,
                     );
                     $result_cash[$record_id]["dep1"]    = array(
                         "Participant ID" => $part_id_d1,
                         "UPC" => $test_upc_d1,
+                        "part_var" => "DEP_1",
                         "Test Result" => $test_result_raw_d1,
                     );
                     $result_cash[$record_id]["dep2"]    = array(
                         "Participant ID" => $part_id_d2,
                         "UPC" => $test_upc_d2,
+                        "part_var" => "DEP_2",
                         "Test Result" => $test_result_raw_d2,
                     );
 
@@ -1164,16 +1167,19 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
 
                     $result_cash[$record_id]["hhd"]     = array(
                         "UPC" => $test_upc,
+                        "part_var" => "HHD",
                         "Test Result" => $test_result_raw,
                         "Result" => $test_result_cls
                     );
                     $result_cash[$record_id]["dep1"]    = array(
                         "UPC" => $test_upc_d1,
+                        "part_var" => "DEP_1",
                         "Test Result" => $test_result_raw_d1,
                         "Result" => $test_result_cls_d1
                     );
                     $result_cash[$record_id]["dep2"]    = array(
                         "UPC" => $test_upc_d2,
+                        "part_var" => "DEP_2",
                         "Test Result" => $test_result_raw_d2,
                         "Result" => $test_result_cls_d2
                     );
@@ -1628,40 +1634,47 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         }
 
         $results_sent_date  = Date("Y-m-d");
-        $data               = array();
         $this->emDebug("results sent date", $results_sent_date);
 
-        $unique_ids = array();
+        $combined_record_instance = 0;
+        $unique_data_by_id = array();
         foreach($results as $rowidx => $result){
             $which_var          = null;
             $main_record_id     = $result[0];
+            $part_var           = $result[1];
 
-            if( in_array("hhd_test_upc", $headers) ){
+            if( $part_var == "HHD" ){
                 $which_var = "hhd_result_sent";
-            }else if( in_array("dep_1_test_upc", $headers) ){
+            }else if( $part_var == "DEP_1" ){
                 $which_var = "dep_1_result_sent";
-            }else if( in_array("dep_2_test_upc", $headers) ){
+            }else if( $part_var == "DEP_2" ){
                 $which_var = "dep_2_result_sent";
             }
 
-            if($which_var && !in_array($main_record_id, $unique_ids)){
-                array_push($unique_ids, $main_record_id);
+            if($which_var){
                 $temp = array(
                     "record_id"         => $main_record_id,
                     $which_var          => 1
                 );
-                // $temp[$which_var_date] = $results_sent_date;
-                $data[]  = $temp;
+
+                if(array_key_exists($main_record_id, $unique_data_by_id)){
+                    $unique_data_by_id[$main_record_id][$which_var] = 1;
+                    $combined_record_instance++;
+                }else{
+                    $unique_data_by_id[$main_record_id] = $temp;
+                }
+
             }else{
                 $this->emDebug("wtf couldnt find headers label?", $headers);
             }
         }
+        $data = array_values($unique_data_by_id);
 
         $this->emDebug($data);
         $r  = \REDCap::saveData($this->main_project, 'json', json_encode($data) );
 
         if(empty($r["errors"])){
-            $success = $r["item_count"];
+            $success = count($r["ids"]) + $combined_record_instance;
             $this->emDebug("All Records Saved", $r);
         }else{
             $this->emDebug("Error saving some(?) records", $r);

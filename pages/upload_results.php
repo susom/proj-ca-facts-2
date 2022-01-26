@@ -29,9 +29,9 @@ $all_results        = $module->getAllRecordsWithResults();
 
 if(isset($_GET["download_results_shipping"]) OR isset($_GET["download_all_results"]) ){
     $get_all        = isset($_GET["download_all_results"]);
-    $headers        = array("Record ID","UPC" , "Age", "Gender", "Codename" , "Address 1", "Address 2", "City", "State", "Zip",  "Test Result", "Result" );
+    $headers        = array("Record ID","Part_Var" ,"UPC" ,  "Age", "Gender", "Codename" , "Address 1", "Address 2", "City", "State", "Zip",  "Test Result", "Result" );
     if($get_all){
-        $headers        = array("Record ID","Participant ID", "UPC" , "Age", "Gender", "Codename" ,  "Zip",  "Test Result" );
+        $headers        = array("Record ID","Participant ID", "Part_Var" ,"UPC" , "Age", "Gender", "Codename" ,  "Zip",  "Test Result" );
     }
     $output_dest    = 'php://output';
     $output         = fopen($output_dest, 'w') or die('Can\'t create .csv file, try again later.');
@@ -48,6 +48,7 @@ if(isset($_GET["download_results_shipping"]) OR isset($_GET["download_all_result
 
             $row_array[]    = $part["Record ID"];
             $row_array[]    = $part["Participant ID"];
+            $row_array[]    = $part["part_var"];
             $row_array[]    = $part["UPC"];
             $row_array[]    = $age;
             $row_array[]    = $gender;
@@ -64,6 +65,7 @@ if(isset($_GET["download_results_shipping"]) OR isset($_GET["download_all_result
             $age    = $part["Age"] ?? null;
 
             $row_array[]    = $part["Record ID"];
+            $row_array[]    = $part["part_var"];
             $row_array[]    = $part["UPC"];
             $row_array[]    = $age;
             $row_array[]    = $gender;
@@ -274,6 +276,7 @@ require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
             <thead>
             <tr>
                 <th>Record ID</th>
+                <th>Part_Var</th>
                 <th>UPC</th>
                 <th>Test Result</th>
                 <th>Result</th>
@@ -294,6 +297,7 @@ require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
                 $age    = $part["Age"] ?? null;
                 $html = "<tr>";
                 $html .= "<td>{$part["Record ID"]}</td>";
+                $html .= "<td>{$part["part_var"]}</td>";
                 $html .= "<td>{$part["UPC"]}</td>";
                 $html .= "<td>{$part["Test Result"]}</td>";
                 $html .= "<td>{$part["Result"]}</td>";
@@ -337,6 +341,7 @@ require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
                 $age    = $part["Age"] ?? null;
                 $html = "<tr>";
                 $html .= "<td>{$part["Record ID"]}</td>";
+                $html .= "<td>{$part["part_var"]}</td>";
                 $html .= "<td>{$part["Participant ID"]}</td>";
                 $html .= "<td>{$part["UPC"]}</td>";
                 $html .= "<td>{$part["Test Result"]}</td>";
