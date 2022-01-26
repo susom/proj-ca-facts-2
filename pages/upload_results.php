@@ -368,14 +368,12 @@ require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
     <script type="text/javascript" src="//cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
     <script>
         $(document).ready(function(){
-            // $('#statuses').DataTable();
-            // $('#statuses_all').DataTable();
+
 
             $("#upload_btn").click(function(){
                 var file =  $("#upload_csv").prop('files')[0];
 
                 if(file){
-                    console.log("what the fuck");
                     ajaxlikeFormUpload($("#upload_csv"));
                 }
 
@@ -427,6 +425,9 @@ require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
                 el.parent().append($("<input type='hidden'>").attr("name","input_field").val(input_field));
                 el.parent().trigger("submit");
             }
+
+            $('#statuses').DataTable();
+            $('#statuses_all').DataTable();
         });
     </script>
 </div>
