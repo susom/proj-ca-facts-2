@@ -681,7 +681,8 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         $q 		    = \REDCap::getData($params);
         $records    = json_decode($q, true);
 
-        $data       = array();
+        $bc_part_sync   = array();
+        $data           = array();
         foreach($records as $record){
             $record_id          = $record["record_id"];
             $kit_household_code = $record["kit_household_code"];
@@ -694,10 +695,12 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
                 $temp       = array();
                 $part_id    = $record[$part_id_var];
                 $prefix     = "hhd";
+                $bc_arm     = "head_of_household_arm_1";
                 $is_hhd     = true;
                 if($i > 0){
-                    $prefix = "dep_".$i;
-                    $is_hdd = false;
+                    $prefix     = "dep_".$i;
+                    $bc_arm     = "dependent_".$i."_arm_1";
+                    $is_hdd     = false;
                 }
 
                 if(!empty($part_id)){
@@ -711,8 +714,17 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
 
                 if(!empty($temp)){
                     array_push($data, $temp);
+                    $bc_part_sync[] = array(
+                        "record_id"     => $record_id,
+                        "redcap_event_name"        => $bc_arm,
+                        "bc_part_id"    => $part_id
+                    );
                 }
             }
+        }
+
+        if(!empty($bc_part_sync)){
+            $r = \REDCap::saveData($this->main_project ,'json', json_encode($bc_part_sync) );
         }
         return $data;
     }
