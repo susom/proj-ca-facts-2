@@ -1892,10 +1892,11 @@ class ProjCaFacts2 extends \ExternalModules\AbstractExternalModule {
         $merchant_id    = $this->getProjectSetting('usps-merchant-id');
         $mid            = $this->getProjectSetting('usps-mid');
 
-        $usps_apiurl    = "https://returns.usps.com/Services/ExternalCreateReturnLabel.svc/ExternalCreateReturnLabel?externalReturnLabelRequest=";
+//        $usps_apiurl    = "https://returns.usps.com/Services/ExternalCreateReturnLabel.svc/ExternalCreateReturnLabel?externalReturnLabelRequest=";
+        $usps_apiurl    = "https://returns.usps.com/services/GetLabel?externalReturnLabelRequest=";
 
         $xml_arr        = array(
-             "MerchantAccountID"            => $merchant_id
+             "MerchantAccountCode"          => $merchant_id
             ,"MID"                          => $mid
             ,"BlankCustomerAddress"         => TRUE
             ,"LabelFormat"                  => "NOI"
